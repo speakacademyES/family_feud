@@ -64,7 +64,7 @@
     color: #fff;
     font-size: 1.7rem;
     font-weight: 800;
-    width: 86px; height: 52px;
+    width: 86px; height: 46px;
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 3px 12px rgba(0,0,0,.5);
@@ -150,7 +150,6 @@
     color: transparent;
     transition: color .2s;
   }
-  /* revealed state */
   .answer-slot.revealed {
     background: linear-gradient(180deg, #1a56db 0%, #1040a0 100%);
     border-color: #3a7aff;
@@ -227,7 +226,7 @@
     border: none;
     border-radius: 8px;
     font-size: .95rem; font-weight: 700;
-    padding: 0 18px; height: 52px;
+    padding: 0 18px; height: 46px;
     cursor: pointer;
     transition: background .2s, transform .1s;
     text-transform: uppercase; letter-spacing: 1px;
@@ -242,7 +241,7 @@
     background: #fff;
     border: none;
     border-radius: 8px;
-    height: 52px;
+    height: 46px;
     padding: 0 16px;
     font-size: 1.05rem;
     font-weight: 600;
@@ -294,7 +293,6 @@
     width: 92%; max-width: 700px;
     background: linear-gradient(180deg, #162040 0%, #0d1733 100%);
     border-radius: 50px / 38px;
-    overflow: visible;
     box-shadow:
       0 0 0 5px #1a1a2e,
       0 0 0 9px #c07000,
@@ -415,6 +413,13 @@
   <button class="overlay-btn" onclick="beginRound()">Go!</button>
 </div>
 
+<!-- ===================== NEXT QUESTION PAUSE ===================== -->
+<div class="overlay hidden" id="nextQOverlay">
+  <h1 id="nextQTitle">Question Complete</h1>
+  <h2 id="nextQSub"></h2>
+  <button class="overlay-btn" onclick="confirmNextQuestion()">Next Question</button>
+</div>
+
 <!-- ===================== MAIN GAME ===================== -->
 <div class="game-wrap hidden" id="gameWrap">
   <div class="round-indicator" id="roundIndicator">Round 1 — Question 1 of 3</div>
@@ -430,9 +435,7 @@
   <div class="board-ring">
     <div class="side-logo left">FAMILY<br>FEUD</div>
     <div class="side-logo right">FAMILY<br>FEUD</div>
-    <div class="answer-grid" id="answerGrid">
-      <!-- slots injected by JS -->
-    </div>
+    <div class="answer-grid" id="answerGrid"></div>
   </div>
 
   <div class="scores-row">
@@ -505,30 +508,30 @@
 <script>
 // ===================== STATE =====================
 let questionsData = null;
-let roundQuestions = [];   // shuffled questions for rounds 1-3
-let finalQuestions = [];   // shuffled final round questions
-let currentRound = 1;      // 1, 2, 3, or 'final'
-let currentQIndex = 0;     // index within current round
-let currentQ = null;       // active question object
-let scores = [0, 0];       // team 1 & 2
+let roundQuestions = [];
+let finalQuestions = [];
+let currentRound = 1;
+let currentQIndex = 0;
+let currentQ = null;
+let scores = [0, 0];
 let strikes = 0;
-let activeTeam = 0;        // 0 or 1
-let roundScore = 0;        // points earned this question
+let activeTeam = 0;
+let roundScore = 0;
 let timerInterval = null;
 let timeLeft = 0;
-let gamePhase = 'idle';    // idle | playing | final | over
+let gamePhase = 'idle';    // idle | playing | final | over | paused
+let pendingAdvance = null; // stores the function to call when "Next Question" is clicked
 const QUESTIONS_PER_ROUND = 3;
 const TIMER_DURATION = 30;
 
-// ─── AUDIO (Web Audio API) ───
+// ─── AUDIO ───
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
 
 function playCorrect() {
   ensureAudio();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.connect(g); g.connect(audioCtx.destination);
   o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime);
   o.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.08);
@@ -536,11 +539,9 @@ function playCorrect() {
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
   o.start(); o.stop(audioCtx.currentTime + 0.3);
 }
-
 function playWrong() {
   ensureAudio();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.connect(g); g.connect(audioCtx.destination);
   o.type = 'sawtooth'; o.frequency.setValueAtTime(200, audioCtx.currentTime);
   o.frequency.setValueAtTime(120, audioCtx.currentTime + 0.15);
@@ -548,11 +549,9 @@ function playWrong() {
   g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
   o.start(); o.stop(audioCtx.currentTime + 0.45);
 }
-
 function playTimerWarning() {
   ensureAudio();
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
   o.connect(g); g.connect(audioCtx.destination);
   o.type = 'sine'; o.frequency.setValueAtTime(440, audioCtx.currentTime);
   g.gain.setValueAtTime(0.15, audioCtx.currentTime);
@@ -560,25 +559,19 @@ function playTimerWarning() {
   o.start(); o.stop(audioCtx.currentTime + 0.18);
 }
 
-// ─── FLASH EFFECTS ───
+// ─── FLASH / EFFECTS ───
 function flashCorrect() {
-  const el = document.createElement('div');
-  el.className = 'correct-flash';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 400);
+  const el = document.createElement('div'); el.className = 'correct-flash';
+  document.body.appendChild(el); setTimeout(() => el.remove(), 400);
 }
 function flashWrong() {
-  const el = document.createElement('div');
-  el.className = 'wrong-flash';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 450);
+  const el = document.createElement('div'); el.className = 'wrong-flash';
+  document.body.appendChild(el); setTimeout(() => el.remove(), 450);
 }
 function showBigX() {
-  const el = document.createElement('div');
-  el.className = 'big-x';
+  const el = document.createElement('div'); el.className = 'big-x';
   el.innerHTML = '<span>✕</span>';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 650);
+  document.body.appendChild(el); setTimeout(() => el.remove(), 650);
 }
 
 // ─── SHUFFLE ───
@@ -593,108 +586,113 @@ function shuffle(arr) {
 
 // ═══════════════════════════════════════════════════════════════════
 // ║  QUESTIONS DATABASE — Edit your questions & answers here!      ║
-// ║  "rounds"     → feeds Rounds 1-3  (need 9 questions, 6 ans)   ║
-// ║  "finalRound" → feeds the Final Round (5 questions, 5 ans)    ║
+// ║  Each answer has:                                               ║
+// ║    "text"    → what is displayed on the board when revealed     ║
+// ║    "points"  → score value (higher = more popular answer)       ║
+// ║    "aliases" → ALL words/phrases that count as correct.         ║
+// ║               Include synonyms, variants, typos, related terms. ║
+// ║  "rounds"     → feeds Rounds 1-3  (9 questions, 6 answers each) ║
+// ║  "finalRound" → feeds the Final Round (5 questions, 5 ans each) ║
 // ═══════════════════════════════════════════════════════════════════
 const QUESTIONS_DB = {
   "rounds": [
     {
       "question": "Name something that gets shredded.",
       "answers": [
-        { "text": "Paper", "points": 55 },
-        { "text": "Cheese", "points": 42 },
-        { "text": "Documents", "points": 30 },
-        { "text": "Wood", "points": 22 },
-        { "text": "Clothes", "points": 12 },
-        { "text": "Guitar", "points": 8 }
+        { "text": "Paper", "points": 55, "aliases": ["paper", "documents", "newspaper", "notebook", "wrapping paper", "tissue paper"] },
+        { "text": "Cheese", "points": 42, "aliases": ["cheese", "cheddar", "mozzarella", "parmesan", "swiss"] },
+        { "text": "Meat", "points": 30, "aliases": ["meat", "chicken", "beef", "pork", "steak", "ham", "turkey"] },
+        { "text": "Wood", "points": 22, "aliases": ["wood", "lumber", "timber", "plywood", "wooden"] },
+        { "text": "Clothes", "points": 12, "aliases": ["clothes", "clothing", "shirt", "pants", "fabric", "garment", "jacket"] },
+        { "text": "Guitar", "points": 8, "aliases": ["guitar", "musical instrument", "instrument"] }
       ]
     },
     {
       "question": "Name something people swallow without chewing.",
       "answers": [
-        { "text": "Water", "points": 55 },
-        { "text": "Pills", "points": 42 },
-        { "text": "Gum", "points": 30 },
-        { "text": "Juice", "points": 22 },
-        { "text": "Jello", "points": 12 },
-        { "text": "Soup", "points": 8 }
+        { "text": "Water", "points": 55, "aliases": ["water", "liquid", "beverage"] },
+        { "text": "Pills", "points": 42, "aliases": ["pills", "pill", "tablet", "tablets", "medicine", "medication", "vitamins", "vitamin", "capsule"] },
+        { "text": "Gum", "points": 30, "aliases": ["gum", "bubblegum", "chewing gum"] },
+        { "text": "Juice", "points": 22, "aliases": ["juice", "orange juice", "apple juice", "smoothie"] },
+        { "text": "Jello", "points": 12, "aliases": ["jello", "jell-o", "gelatin", "jelly"] },
+        { "text": "Soup", "points": 8, "aliases": ["soup", "broth", "stew"] }
       ]
     },
     {
       "question": "Name a reason you might be late to work.",
       "answers": [
-        { "text": "Traffic", "points": 55 },
-        { "text": "Overslept", "points": 42 },
-        { "text": "Car trouble", "points": 30 },
-        { "text": "Bad weather", "points": 22 },
-        { "text": "Lost my keys", "points": 12 },
-        { "text": "Long line at coffee shop", "points": 8 }
+        { "text": "Traffic", "points": 55, "aliases": ["traffic", "traffic jam", "congestion", "stuck in traffic"] },
+        { "text": "Overslept", "points": 42, "aliases": ["overslept", "slept in", "oversleep", "alarm didn't go off", "slept through alarm", "woke up late"] },
+        { "text": "Car trouble", "points": 30, "aliases": ["car trouble", "flat tire", "flat tyre", "car broke down", "broke down", "car problems", "engine trouble", "battery dead"] },
+        { "text": "Bad weather", "points": 22, "aliases": ["bad weather", "rain", "snow", "storm", "fog", "ice", "weather"] },
+        { "text": "Lost my keys", "points": 12, "aliases": ["lost my keys", "lost keys", "can't find keys", "misplaced keys"] },
+        { "text": "Long line", "points": 8, "aliases": ["long line", "queue", "waiting in line", "coffee shop", "long queue"] }
       ]
     },
     {
       "question": "Name something you find in a bathroom.",
       "answers": [
-        { "text": "Toothbrush", "points": 55 },
-        { "text": "Toilet", "points": 42 },
-        { "text": "Towel", "points": 30 },
-        { "text": "Soap", "points": 22 },
-        { "text": "Mirror", "points": 12 },
-        { "text": "Shower curtain", "points": 8 }
+        { "text": "Toothbrush", "points": 55, "aliases": ["toothbrush", "tooth brush", "toothpaste", "tooth paste"] },
+        { "text": "Toilet", "points": 42, "aliases": ["toilet", "toilet paper", "tp", "loo"] },
+        { "text": "Towel", "points": 30, "aliases": ["towel", "bath towel", "hand towel", "towels"] },
+        { "text": "Soap", "points": 22, "aliases": ["soap", "body wash", "shampoo", "conditioner", "cleanser"] },
+        { "text": "Mirror", "points": 12, "aliases": ["mirror", "mirrors"] },
+        { "text": "Shower", "points": 8, "aliases": ["shower", "bathtub", "bath", "tub", "shower curtain"] }
       ]
     },
     {
       "question": "Name a sport you can play alone.",
       "answers": [
-        { "text": "Golf", "points": 55 },
-        { "text": "Tennis", "points": 42 },
-        { "text": "Swimming", "points": 30 },
-        { "text": "Bowling", "points": 22 },
-        { "text": "Running", "points": 12 },
-        { "text": "Archery", "points": 8 }
+        { "text": "Golf", "points": 55, "aliases": ["golf"] },
+        { "text": "Tennis", "points": 42, "aliases": ["tennis", "squash", "racquetball", "badminton"] },
+        { "text": "Swimming", "points": 30, "aliases": ["swimming", "swim"] },
+        { "text": "Bowling", "points": 22, "aliases": ["bowling"] },
+        { "text": "Running", "points": 12, "aliases": ["running", "jogging", "run", "jog", "marathon"] },
+        { "text": "Archery", "points": 8, "aliases": ["archery", "darts", "dart"] }
       ]
     },
     {
       "question": "Name something that has hands.",
       "answers": [
-        { "text": "Clock", "points": 55 },
-        { "text": "Person", "points": 42 },
-        { "text": "Watch", "points": 30 },
-        { "text": "Monkey", "points": 22 },
-        { "text": "Puppet", "points": 12 },
-        { "text": "Statue", "points": 8 }
+        { "text": "Clock", "points": 55, "aliases": ["clock", "wall clock", "alarm clock", "grandfather clock"] },
+        { "text": "Person", "points": 42, "aliases": ["person", "people", "human", "humans", "man", "woman", "body"] },
+        { "text": "Watch", "points": 30, "aliases": ["watch", "wristwatch", "wrist watch"] },
+        { "text": "Monkey", "points": 22, "aliases": ["monkey", "ape", "primate", "gorilla", "chimpanzee"] },
+        { "text": "Puppet", "points": 12, "aliases": ["puppet", "marionette", "mannequin", "doll"] },
+        { "text": "Statue", "points": 8, "aliases": ["statue", "sculpture", "figurine"] }
       ]
     },
     {
       "question": "Name something you bring to a party.",
       "answers": [
-        { "text": "Food", "points": 55 },
-        { "text": "Drinks", "points": 42 },
-        { "text": "A gift", "points": 30 },
-        { "text": "Music", "points": 22 },
-        { "text": "Friends", "points": 12 },
-        { "text": "A game", "points": 8 }
+        { "text": "Food", "points": 55, "aliases": ["food", "snacks", "snack", "cake", "pizza", "chips", "dip", "appetizer"] },
+        { "text": "Drinks", "points": 42, "aliases": ["drinks", "drink", "alcohol", "beer", "wine", "soda", "beverages", "punch"] },
+        { "text": "A gift", "points": 30, "aliases": ["a gift", "gift", "present", "presents", "gifts"] },
+        { "text": "Music", "points": 22, "aliases": ["music", "speakers", "playlist", "dj", "songs"] },
+        { "text": "Friends", "points": 12, "aliases": ["friends", "friend", "family", "guests"] },
+        { "text": "A game", "points": 8, "aliases": ["a game", "game", "games", "board game", "cards", "card game"] }
       ]
     },
     {
       "question": "Name something you do before bed.",
       "answers": [
-        { "text": "Brush teeth", "points": 55 },
-        { "text": "Read", "points": 42 },
-        { "text": "Watch TV", "points": 30 },
-        { "text": "Shower", "points": 22 },
-        { "text": "Check phone", "points": 12 },
-        { "text": "Set an alarm", "points": 8 }
+        { "text": "Brush teeth", "points": 55, "aliases": ["brush teeth", "brush my teeth", "brushing teeth", "brush", "toothbrush"] },
+        { "text": "Read", "points": 42, "aliases": ["read", "reading", "read a book", "book"] },
+        { "text": "Watch TV", "points": 30, "aliases": ["watch tv", "tv", "television", "watch a movie", "movie", "netflix", "streaming"] },
+        { "text": "Shower", "points": 22, "aliases": ["shower", "bath", "bathe", "bathing", "take a shower"] },
+        { "text": "Check phone", "points": 12, "aliases": ["check phone", "phone", "scroll", "social media", "instagram", "facebook", "tiktok"] },
+        { "text": "Set alarm", "points": 8, "aliases": ["set alarm", "set an alarm", "alarm", "set my alarm"] }
       ]
     },
     {
       "question": "Name a type of dance.",
       "answers": [
-        { "text": "Salsa", "points": 55 },
-        { "text": "Ballet", "points": 42 },
-        { "text": "Hip hop", "points": 30 },
-        { "text": "Waltz", "points": 22 },
-        { "text": "Tango", "points": 12 },
-        { "text": "Breakdance", "points": 8 }
+        { "text": "Salsa", "points": 55, "aliases": ["salsa"] },
+        { "text": "Ballet", "points": 42, "aliases": ["ballet"] },
+        { "text": "Hip hop", "points": 30, "aliases": ["hip hop", "hiphop", "hip-hop"] },
+        { "text": "Waltz", "points": 22, "aliases": ["waltz"] },
+        { "text": "Tango", "points": 12, "aliases": ["tango"] },
+        { "text": "Breakdance", "points": 8, "aliases": ["breakdance", "break dance", "breaking"] }
       ]
     }
   ],
@@ -702,68 +700,64 @@ const QUESTIONS_DB = {
     {
       "question": "Name a country in Europe.",
       "answers": [
-        { "text": "France", "points": 20 },
-        { "text": "Germany", "points": 18 },
-        { "text": "Italy", "points": 16 },
-        { "text": "Spain", "points": 14 },
-        { "text": "England", "points": 12 }
+        { "text": "France", "points": 20, "aliases": ["france"] },
+        { "text": "Germany", "points": 18, "aliases": ["germany"] },
+        { "text": "Italy", "points": 16, "aliases": ["italy"] },
+        { "text": "Spain", "points": 14, "aliases": ["spain"] },
+        { "text": "England", "points": 12, "aliases": ["england", "uk", "united kingdom", "britain", "great britain"] }
       ]
     },
     {
       "question": "Name something that is green.",
       "answers": [
-        { "text": "Grass", "points": 20 },
-        { "text": "Tree", "points": 18 },
-        { "text": "Frog", "points": 16 },
-        { "text": "Broccoli", "points": 14 },
-        { "text": "Avocado", "points": 12 }
+        { "text": "Grass", "points": 20, "aliases": ["grass", "lawn"] },
+        { "text": "Tree", "points": 18, "aliases": ["tree", "trees", "leaves", "leaf"] },
+        { "text": "Frog", "points": 16, "aliases": ["frog", "frogs", "toad"] },
+        { "text": "Broccoli", "points": 14, "aliases": ["broccoli", "vegetables", "veggie", "spinach", "lettuce", "cucumber", "peas"] },
+        { "text": "Avocado", "points": 12, "aliases": ["avocado", "lime", "kiwi", "apple", "melon"] }
       ]
     },
     {
       "question": "Name a famous movie.",
       "answers": [
-        { "text": "Titanic", "points": 20 },
-        { "text": "Star Wars", "points": 18 },
-        { "text": "The Godfather", "points": 16 },
-        { "text": "Jurassic Park", "points": 14 },
-        { "text": "Avatar", "points": 12 }
+        { "text": "Titanic", "points": 20, "aliases": ["titanic"] },
+        { "text": "Star Wars", "points": 18, "aliases": ["star wars"] },
+        { "text": "The Godfather", "points": 16, "aliases": ["the godfather", "godfather"] },
+        { "text": "Jurassic Park", "points": 14, "aliases": ["jurassic park", "jurassic world"] },
+        { "text": "Avatar", "points": 12, "aliases": ["avatar"] }
       ]
     },
     {
       "question": "Name something with wheels.",
       "answers": [
-        { "text": "Car", "points": 20 },
-        { "text": "Bicycle", "points": 18 },
-        { "text": "Bus", "points": 16 },
-        { "text": "Shopping cart", "points": 14 },
-        { "text": "Skateboard", "points": 12 }
+        { "text": "Car", "points": 20, "aliases": ["car", "automobile", "vehicle", "taxi", "cab"] },
+        { "text": "Bicycle", "points": 18, "aliases": ["bicycle", "bike", "bmx"] },
+        { "text": "Bus", "points": 16, "aliases": ["bus", "coach"] },
+        { "text": "Shopping cart", "points": 14, "aliases": ["shopping cart", "shopping trolley", "trolley", "cart"] },
+        { "text": "Skateboard", "points": 12, "aliases": ["skateboard", "scooter", "roller skates"] }
       ]
     },
     {
       "question": "Name an animal that can fly.",
       "answers": [
-        { "text": "Bird", "points": 20 },
-        { "text": "Bat", "points": 18 },
-        { "text": "Butterfly", "points": 16 },
-        { "text": "Bee", "points": 14 },
-        { "text": "Dragonfly", "points": 12 }
+        { "text": "Bird", "points": 20, "aliases": ["bird", "birds", "eagle", "hawk", "parrot", "sparrow", "pigeon", "owl", "robin"] },
+        { "text": "Bat", "points": 18, "aliases": ["bat", "bats"] },
+        { "text": "Butterfly", "points": 16, "aliases": ["butterfly", "butterflies", "moth"] },
+        { "text": "Bee", "points": 14, "aliases": ["bee", "bees", "wasp", "hornet"] },
+        { "text": "Dragonfly", "points": 12, "aliases": ["dragonfly", "dragonflies", "fly", "mosquito", "insect"] }
       ]
     }
   ]
 };
 
-// ─── LOAD DATA & START ───
-async function loadQuestions() {
-  questionsData = QUESTIONS_DB;
-}
+// ─── LOAD DATA ───
+async function loadQuestions() { questionsData = QUESTIONS_DB; }
 
+// ─── START ───
 function startGame() {
   roundQuestions = shuffle(questionsData.rounds);
   finalQuestions = shuffle(questionsData.finalRound);
-  scores = [0, 0];
-  currentRound = 1;
-  currentQIndex = 0;
-  activeTeam = 0;
+  scores = [0, 0]; currentRound = 1; currentQIndex = 0; activeTeam = 0;
   updateScoreUI();
   document.getElementById('startScreen').classList.add('hidden');
   showRoundTransition();
@@ -771,15 +765,13 @@ function startGame() {
 
 // ─── ROUND TRANSITION ───
 function showRoundTransition() {
-  const el = document.getElementById('roundTransition');
   document.getElementById('gameWrap').classList.add('hidden');
   document.getElementById('finalWrap').classList.add('hidden');
-  el.classList.remove('hidden');
+  document.getElementById('roundTransition').classList.remove('hidden');
   document.getElementById('transitionTitle').textContent = 'Round ' + currentRound;
   document.getElementById('transitionSub').textContent =
     QUESTIONS_PER_ROUND + ' questions • ' + TIMER_DURATION + ' seconds each';
 }
-
 function beginRound() {
   document.getElementById('roundTransition').classList.add('hidden');
   document.getElementById('gameWrap').classList.remove('hidden');
@@ -787,96 +779,110 @@ function beginRound() {
   loadQuestion();
 }
 
+// ─── NEXT QUESTION PAUSE ───
+function pauseForNextQuestion(advanceFn) {
+  gamePhase = 'paused';
+  pendingAdvance = advanceFn;
+
+  const t1 = document.getElementById('team1Name').value || 'Team A';
+  const t2 = document.getElementById('team2Name').value || 'Team B';
+  let subtitle = '';
+
+  if (advanceFn === advanceQuestion) {
+    const nextIdx = currentQIndex + 1;
+    if (nextIdx >= QUESTIONS_PER_ROUND) {
+      subtitle = currentRound >= 3 ? 'Final Round coming up!' : 'Round ' + (currentRound + 1) + ' next';
+    } else {
+      const nextTeam = activeTeam === 0 ? t2 : t1;
+      subtitle = 'Question ' + (nextIdx + 1) + ' of ' + QUESTIONS_PER_ROUND + ' — ' + nextTeam + '\'s turn';
+    }
+  } else {
+    const nextFinal = finalQIdx + 1;
+    subtitle = nextFinal >= 5 ? 'Game ending after this!' : 'Question ' + (nextFinal + 1) + ' of 5';
+  }
+
+  document.getElementById('nextQTitle').textContent = 'Question Complete';
+  document.getElementById('nextQSub').textContent = subtitle;
+  document.getElementById('nextQOverlay').classList.remove('hidden');
+}
+
+function confirmNextQuestion() {
+  document.getElementById('nextQOverlay').classList.add('hidden');
+  if (pendingAdvance) {
+    const fn = pendingAdvance;
+    pendingAdvance = null;
+    fn();
+  }
+}
+
 // ─── LOAD QUESTION ───
 function loadQuestion() {
   const qIdx = (currentRound - 1) * QUESTIONS_PER_ROUND + currentQIndex;
   currentQ = roundQuestions[qIdx];
-  strikes = 0;
-  roundScore = 0;
-  gamePhase = 'playing';
-  updateUI();
-  startTimer();
+  strikes = 0; roundScore = 0; gamePhase = 'playing';
+  updateUI(); startTimer();
   document.getElementById('answerInput').value = '';
   document.getElementById('answerInput').focus();
 }
 
 function updateUI() {
-  // round indicator
   document.getElementById('roundIndicator').textContent =
     'Round ' + currentRound + ' — Question ' + (currentQIndex + 1) + ' of ' + QUESTIONS_PER_ROUND;
-  // question
   document.getElementById('questionText').textContent = currentQ.question;
-  // answer grid
   const grid = document.getElementById('answerGrid');
   grid.innerHTML = '';
   currentQ.answers.forEach((a, i) => {
-    grid.innerHTML += `
-      <div class="answer-slot" id="slot${i}">
-        <div class="slot-num">${i + 1}</div>
-        <div class="slot-text">${a.text}</div>
-        <div class="slot-points">${a.points}</div>
-      </div>`;
+    grid.innerHTML += `<div class="answer-slot" id="slot${i}">
+      <div class="slot-num">${i + 1}</div>
+      <div class="slot-text">${a.text}</div>
+      <div class="slot-points">${a.points}</div>
+    </div>`;
   });
-  // strikes
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3; i++)
     document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
-  }
-  // active team highlight
   document.getElementById('team1Card').classList.toggle('active', activeTeam === 0);
   document.getElementById('team2Card').classList.toggle('active', activeTeam === 1);
 }
 
 // ─── TIMER ───
 function startTimer() {
-  clearInterval(timerInterval);
-  timeLeft = TIMER_DURATION;
-  updateTimerUI();
+  clearInterval(timerInterval); timeLeft = TIMER_DURATION; updateTimerUI();
   timerInterval = setInterval(() => {
-    timeLeft--;
-    updateTimerUI();
+    timeLeft--; updateTimerUI();
     if (timeLeft <= 5 && timeLeft > 0) playTimerWarning();
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      onTimeUp();
-    }
+    if (timeLeft <= 0) { clearInterval(timerInterval); onTimeUp(); }
   }, 1000);
 }
-
 function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
-
 function updateTimerUI() {
   const box = document.getElementById('timerBox');
-  box.textContent = timeLeft;
-  box.className = 'timer-box';
+  box.textContent = timeLeft; box.className = 'timer-box';
   if (timeLeft <= 10) box.classList.add('warning');
   if (timeLeft <= 5)  { box.classList.remove('warning'); box.classList.add('danger'); }
 }
 
 function onTimeUp() {
-  gamePhase = 'idle';
-  playWrong();
-  flashWrong();
-  // award points to active team
-  scores[activeTeam] += roundScore;
-  updateScoreUI();
-  setTimeout(() => advanceQuestion(), 1200);
+  gamePhase = 'idle'; playWrong(); flashWrong();
+  scores[activeTeam] += roundScore; updateScoreUI();
+  setTimeout(() => pauseForNextQuestion(advanceQuestion), 1200);
 }
 
-// ─── ANSWER LOGIC ───
+// ─── ANSWER MATCHING ───
 function normalise(str) {
   return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
 }
 
-function fuzzyMatch(input, target) {
+// checks the guess against ALL aliases of an answer object
+function fuzzyMatch(input, answer) {
   const ni = normalise(input);
-  const nt = normalise(target);
-  if (ni === nt) return true;
-  if (ni.includes(nt) || nt.includes(ni)) return true;
-  // simple levenshtein for short strings
-  if (ni.length > 2 && nt.length > 2) {
-    const dist = levenshtein(ni, nt);
-    const maxLen = Math.max(ni.length, nt.length);
-    if (dist / maxLen <= 0.4) return true;
+  for (const alias of answer.aliases) {
+    const na = normalise(alias);
+    if (ni === na) return true;
+    if (ni.includes(na) || na.includes(ni)) return true;
+    if (ni.length > 2 && na.length > 2) {
+      const dist = levenshtein(ni, na);
+      if (dist / Math.max(ni.length, na.length) <= 0.35) return true;
+    }
   }
   return false;
 }
@@ -893,6 +899,7 @@ function levenshtein(a, b) {
   return dp[m][n];
 }
 
+// ─── SUBMIT / SKIP ───
 function submitAnswer() {
   if (gamePhase !== 'playing') return;
   const input = document.getElementById('answerInput');
@@ -900,42 +907,32 @@ function submitAnswer() {
   if (!guess) return;
   input.value = '';
 
-  // check against unrevealed answers
   let matched = false;
   currentQ.answers.forEach((a, i) => {
     if (matched) return;
     const slot = document.getElementById('slot' + i);
     if (slot.classList.contains('revealed')) return;
-    if (fuzzyMatch(guess, a.text)) {
+    if (fuzzyMatch(guess, a)) {
       matched = true;
       slot.classList.add('revealed');
       roundScore += a.points;
-      playCorrect();
-      flashCorrect();
-      // check if all revealed
+      playCorrect(); flashCorrect();
       if (allRevealed()) {
         stopTimer();
-        scores[activeTeam] += roundScore;
-        updateScoreUI();
-        setTimeout(() => advanceQuestion(), 1000);
+        scores[activeTeam] += roundScore; updateScoreUI();
+        setTimeout(() => pauseForNextQuestion(advanceQuestion), 1000);
       }
     }
   });
 
   if (!matched) {
-    strikes++;
-    playWrong();
-    flashWrong();
-    showBigX();
-    for (let i = 0; i < 3; i++) {
+    strikes++; playWrong(); flashWrong(); showBigX();
+    for (let i = 0; i < 3; i++)
       document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
-    }
     if (strikes >= 3) {
-      stopTimer();
-      gamePhase = 'idle';
-      scores[activeTeam] += roundScore;
-      updateScoreUI();
-      setTimeout(() => advanceQuestion(), 900);
+      stopTimer(); gamePhase = 'idle';
+      scores[activeTeam] += roundScore; updateScoreUI();
+      setTimeout(() => pauseForNextQuestion(advanceQuestion), 900);
     }
   }
   input.focus();
@@ -943,20 +940,13 @@ function submitAnswer() {
 
 function skipAnswer() {
   if (gamePhase !== 'playing') return;
-  // skip = wrong answer (strike)
-  strikes++;
-  playWrong();
-  flashWrong();
-  showBigX();
-  for (let i = 0; i < 3; i++) {
+  strikes++; playWrong(); flashWrong(); showBigX();
+  for (let i = 0; i < 3; i++)
     document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
-  }
   if (strikes >= 3) {
-    stopTimer();
-    gamePhase = 'idle';
-    scores[activeTeam] += roundScore;
-    updateScoreUI();
-    setTimeout(() => advanceQuestion(), 900);
+    stopTimer(); gamePhase = 'idle';
+    scores[activeTeam] += roundScore; updateScoreUI();
+    setTimeout(() => pauseForNextQuestion(advanceQuestion), 900);
   }
   document.getElementById('answerInput').focus();
 }
@@ -965,31 +955,24 @@ function allRevealed() {
   return currentQ.answers.every((_, i) => document.getElementById('slot' + i).classList.contains('revealed'));
 }
 
-// ─── ADVANCE QUESTION / ROUND ───
+// ─── ADVANCE ───
 function advanceQuestion() {
   currentQIndex++;
-  // alternate team after each question
   activeTeam = activeTeam === 0 ? 1 : 0;
   if (currentQIndex >= QUESTIONS_PER_ROUND) {
-    currentRound++;
-    currentQIndex = 0;
-    if (currentRound > 3) {
-      // start final round
-      startFinalRound();
-    } else {
-      showRoundTransition();
-    }
+    currentRound++; currentQIndex = 0;
+    if (currentRound > 3) startFinalRound();
+    else showRoundTransition();
   } else {
     loadQuestion();
   }
 }
 
-// ─── SCORE UI ───
+// ─── SCORES ───
 function updateScoreUI() {
   document.getElementById('team1Score').textContent = scores[0];
   document.getElementById('team2Score').textContent = scores[1];
 }
-
 function selectTeam(n) {
   activeTeam = n - 1;
   document.getElementById('team1Card').classList.toggle('active', activeTeam === 0);
@@ -997,19 +980,13 @@ function selectTeam(n) {
 }
 
 // ─── FINAL ROUND ───
-let finalQIdx = 0;
-let finalRoundPoints = 0;
-let finalStrikes = 0;
-let finalCurrentQ = null;
+let finalQIdx = 0, finalRoundPoints = 0, finalStrikes = 0, finalCurrentQ = null;
 
 function startFinalRound() {
   stopTimer();
   document.getElementById('gameWrap').classList.add('hidden');
   document.getElementById('finalWrap').classList.remove('hidden');
-  finalQIdx = 0;
-  finalRoundPoints = 0;
-  finalStrikes = 0;
-  // determine which team plays final (higher score)
+  finalQIdx = 0; finalRoundPoints = 0; finalStrikes = 0;
   activeTeam = scores[0] >= scores[1] ? 0 : 1;
   loadFinalQuestion();
 }
@@ -1020,7 +997,6 @@ function loadFinalQuestion() {
   document.getElementById('finalQIndicator').textContent =
     'Final Round — Question ' + (finalQIdx + 1) + ' of 5';
   document.getElementById('finalQuestionText').textContent = finalCurrentQ.question;
-  // reset slots
   finalCurrentQ.answers.forEach((a, i) => {
     const slot = document.getElementById('fslot' + i);
     slot.classList.remove('revealed');
@@ -1030,38 +1006,27 @@ function loadFinalQuestion() {
   document.getElementById('finalTotal').textContent = finalRoundPoints;
   document.getElementById('finalAnswerInput').value = '';
   document.getElementById('finalAnswerInput').focus();
-  // timer
   startFinalTimer();
 }
 
 function startFinalTimer() {
-  clearInterval(timerInterval);
-  timeLeft = TIMER_DURATION;
-  updateFinalTimerUI();
+  clearInterval(timerInterval); timeLeft = TIMER_DURATION; updateFinalTimerUI();
   timerInterval = setInterval(() => {
-    timeLeft--;
-    updateFinalTimerUI();
+    timeLeft--; updateFinalTimerUI();
     if (timeLeft <= 5 && timeLeft > 0) playTimerWarning();
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      onFinalTimeUp();
-    }
+    if (timeLeft <= 0) { clearInterval(timerInterval); onFinalTimeUp(); }
   }, 1000);
 }
-
 function updateFinalTimerUI() {
   const box = document.getElementById('finalTimerBox');
-  box.textContent = timeLeft;
-  box.className = 'timer-box';
+  box.textContent = timeLeft; box.className = 'timer-box';
   if (timeLeft <= 10) box.classList.add('warning');
   if (timeLeft <= 5)  { box.classList.remove('warning'); box.classList.add('danger'); }
 }
 
 function onFinalTimeUp() {
-  gamePhase = 'idle';
-  playWrong();
-  flashWrong();
-  setTimeout(() => advanceFinalQuestion(), 1000);
+  gamePhase = 'idle'; playWrong(); flashWrong();
+  setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 1000);
 }
 
 function finalSubmit() {
@@ -1076,25 +1041,20 @@ function finalSubmit() {
     if (matched) return;
     const slot = document.getElementById('fslot' + i);
     if (slot.classList.contains('revealed')) return;
-    if (fuzzyMatch(guess, a.text)) {
+    if (fuzzyMatch(guess, a)) {
       matched = true;
       slot.classList.add('revealed');
       finalRoundPoints += a.points;
       document.getElementById('finalTotal').textContent = finalRoundPoints;
-      playCorrect();
-      flashCorrect();
+      playCorrect(); flashCorrect();
     }
   });
 
   if (!matched) {
-    finalStrikes++;
-    playWrong();
-    flashWrong();
-    showBigX();
+    finalStrikes++; playWrong(); flashWrong(); showBigX();
     if (finalStrikes >= 3) {
-      stopTimer();
-      gamePhase = 'idle';
-      setTimeout(() => advanceFinalQuestion(), 900);
+      stopTimer(); gamePhase = 'idle';
+      setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 900);
     }
   }
   input.focus();
@@ -1102,25 +1062,18 @@ function finalSubmit() {
 
 function finalSkip() {
   if (gamePhase !== 'final') return;
-  finalStrikes++;
-  playWrong();
-  flashWrong();
-  showBigX();
+  finalStrikes++; playWrong(); flashWrong(); showBigX();
   if (finalStrikes >= 3) {
-    stopTimer();
-    gamePhase = 'idle';
-    setTimeout(() => advanceFinalQuestion(), 900);
+    stopTimer(); gamePhase = 'idle';
+    setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 900);
   }
   document.getElementById('finalAnswerInput').focus();
 }
 
 function advanceFinalQuestion() {
-  finalQIdx++;
-  finalStrikes = 0;
+  finalQIdx++; finalStrikes = 0;
   if (finalQIdx >= 5) {
-    // final round done — add points to active team
-    scores[activeTeam] += finalRoundPoints;
-    updateScoreUI();
+    scores[activeTeam] += finalRoundPoints; updateScoreUI();
     endGame();
   } else {
     loadFinalQuestion();
@@ -1129,23 +1082,19 @@ function advanceFinalQuestion() {
 
 // ─── END GAME ───
 function endGame() {
-  stopTimer();
-  gamePhase = 'over';
+  stopTimer(); gamePhase = 'over';
   document.getElementById('finalWrap').classList.add('hidden');
-  const container = document.getElementById('finalScores');
   const t1 = document.getElementById('team1Name').value || 'Team A';
   const t2 = document.getElementById('team2Name').value || 'Team B';
-  const winner = scores[0] >= scores[1] ? 0 : 1;
-  container.innerHTML = `
-    <div class="final-score-card ${winner===0?'winner':''}">
-      ${winner===0?'<div class="fs-crown">👑</div>':''}
-      <div class="fs-name">${t1}</div>
-      <div class="fs-val">${scores[0]}</div>
+  const w = scores[0] >= scores[1] ? 0 : 1;
+  document.getElementById('finalScores').innerHTML = `
+    <div class="final-score-card ${w===0?'winner':''}">
+      ${w===0?'<div class="fs-crown">👑</div>':''}
+      <div class="fs-name">${t1}</div><div class="fs-val">${scores[0]}</div>
     </div>
-    <div class="final-score-card ${winner===1?'winner':''}">
-      ${winner===1?'<div class="fs-crown">👑</div>':''}
-      <div class="fs-name">${t2}</div>
-      <div class="fs-val">${scores[1]}</div>
+    <div class="final-score-card ${w===1?'winner':''}">
+      ${w===1?'<div class="fs-crown">👑</div>':''}
+      <div class="fs-name">${t2}</div><div class="fs-val">${scores[1]}</div>
     </div>`;
   document.getElementById('gameOverScreen').classList.remove('hidden');
 }
@@ -1154,10 +1103,7 @@ function restartGame() {
   document.getElementById('gameOverScreen').classList.add('hidden');
   document.getElementById('finalWrap').classList.add('hidden');
   document.getElementById('gameWrap').classList.add('hidden');
-  scores = [0, 0];
-  currentRound = 1;
-  currentQIndex = 0;
-  activeTeam = 0;
+  scores = [0, 0]; currentRound = 1; currentQIndex = 0; activeTeam = 0;
   updateScoreUI();
   roundQuestions = shuffle(questionsData.rounds);
   finalQuestions = shuffle(questionsData.finalRound);
@@ -1165,11 +1111,9 @@ function restartGame() {
 }
 
 // ─── INIT ───
-loadQuestions().then(() => {
-  // ready — start screen is visible
-}).catch(err => {
+loadQuestions().catch(err => {
   document.getElementById('startScreen').innerHTML =
-    '<h1 style="color:#e74c3c">Error</h1><h2>Could not load questions.json<br><small>' + err.message + '</small></h2>';
+    '<h1 style="color:#e74c3c">Error</h1><h2>' + err.message + '</h2>';
 });
 </script>
 </body>
