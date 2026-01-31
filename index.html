@@ -278,7 +278,8 @@
     text-transform: uppercase; letter-spacing: 3px;
   }
   .overlay h2 { font-size: 1.3rem; color: #8ab4f8; font-weight: 600; }
-  .overlay .overlay-btn {
+  .overlay .overlay-btn,
+  .reveal-overlay .overlay-btn {
     background: linear-gradient(135deg, #1a56db, #0d3a8e);
     color: #fff; border: none; border-radius: 10px;
     padding: 14px 40px; font-size: 1.1rem; font-weight: 700;
@@ -286,62 +287,178 @@
     box-shadow: 0 4px 18px rgba(26,86,219,.5);
     transition: transform .15s, box-shadow .15s;
   }
-  .overlay .overlay-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(26,86,219,.6); }
+  .overlay .overlay-btn:hover,
+  .reveal-overlay .overlay-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(26,86,219,.6); }
 
   /* ─── FINAL ROUND LAYOUT ─── */
-  .final-board {
-    width: 92%; max-width: 700px;
-    background: linear-gradient(180deg, #162040 0%, #0d1733 100%);
-    border-radius: 50px / 38px;
-    box-shadow:
-      0 0 0 5px #1a1a2e,
-      0 0 0 9px #c07000,
-      0 0 0 13px #f0a500,
-      0 0 0 16px #c07000,
-      0 0 0 20px #0a0f1e,
-      0 0 40px rgba(240,165,0,.3);
-    padding: 28px 30px 24px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .final-slot {
-    background: linear-gradient(180deg, #1e3a6e 0%, #162a52 100%);
-    border: 1.5px solid #2a4a8a;
-    border-radius: 8px;
-    height: 52px;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 20px;
-    transition: background .3s, border-color .3s, box-shadow .3s;
-  }
-  .final-slot .final-text {
-    font-size: .95rem; font-weight: 600;
-    color: transparent; text-transform: uppercase; letter-spacing: 1px;
-    transition: color .2s;
-  }
-  .final-slot .final-points {
-    font-size: .9rem; font-weight: 800; color: transparent;
-    transition: color .2s;
-  }
-  .final-slot.revealed {
-    background: linear-gradient(180deg, #1a56db 0%, #1040a0 100%);
-    border-color: #3a7aff;
-    box-shadow: 0 0 14px rgba(26,86,219,.5);
-  }
-  .final-slot.revealed .final-text { color: #fff; }
-  .final-slot.revealed .final-points { color: #f0c040; }
-
-  .final-total {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 10px; padding: 4px 4px 0;
-  }
-  .final-total .label { font-size: .9rem; font-weight: 700; color: #8ab4f8; text-transform: uppercase; letter-spacing: 1px; }
-  .final-total .val { font-size: 1.3rem; font-weight: 800; color: #fff; min-width: 40px; text-align: right; }
-
-  /* ─── FINAL ROUND Q COUNTER ─── */
   .final-q-indicator {
     font-size: .78rem; font-weight: 700;
     color: #f0a500; text-transform: uppercase; letter-spacing: 2px;
     text-align: center;
   }
+
+  /* summary strip: 5 cells showing status of each question */
+  .final-strip {
+    display: flex; gap: 8px; justify-content: center;
+    width: 92%; max-width: 700px;
+  }
+  .final-cell {
+    flex: 1; height: 48px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px;
+    background: linear-gradient(180deg, #1e3a6e, #162a52);
+    border: 1.5px solid #2a4a8a;
+    transition: background .3s, border-color .3s, box-shadow .3s;
+  }
+  .final-cell .cell-num {
+    font-size: .78rem; font-weight: 800; color: #8ab4f8;
+  }
+  .final-cell .cell-icon {
+    font-size: 1.1rem; font-weight: 900;
+    color: transparent; transition: color .2s;
+  }
+  .final-cell .cell-pts {
+    font-size: .75rem; font-weight: 800;
+    color: transparent; transition: color .2s;
+  }
+  .final-cell.earned {
+    background: linear-gradient(180deg, #1a56db, #1040a0);
+    border-color: #3a7aff;
+    box-shadow: 0 0 10px rgba(26,86,219,.4);
+  }
+  .final-cell.earned .cell-icon { color: #fff; }
+  .final-cell.earned .cell-pts { color: #f0c040; }
+  .final-cell.missed {
+    background: linear-gradient(180deg, #3a1010, #2a0a0a);
+    border-color: #c0392b;
+    box-shadow: 0 0 10px rgba(192,57,43,.3);
+  }
+  .final-cell.missed .cell-icon { color: #e74c3c; }
+  .final-cell.active {
+    border-color: #f0a500;
+    box-shadow: 0 0 12px rgba(240,165,0,.4);
+  }
+
+  /* guessing phase: echo box shows what the player typed (no hint whether correct) */
+  .final-echo {
+    width: 92%; max-width: 700px;
+    background: linear-gradient(180deg, #162040, #0d1733);
+    border: 2px solid #2a4a8a;
+    border-radius: 14px;
+    padding: 18px 28px;
+    min-height: 64px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  }
+  .final-echo .echo-label {
+    font-size: .75rem; font-weight: 700; color: #8ab4f8;
+    text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;
+  }
+  .final-echo .echo-text {
+    font-size: 1.2rem; font-weight: 700; color: #fff;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* ─── REVEAL OVERLAY ─── */
+  .reveal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(5,10,25,.94);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; padding: 30px 20px;
+    animation: fadeIn .3s ease;
+  }
+  .reveal-overlay h1 {
+    font-size: 2.2rem; font-weight: 900;
+    color: #f0a500; text-transform: uppercase; letter-spacing: 3px;
+    text-shadow: 0 0 30px rgba(240,165,0,.4);
+  }
+  .reveal-row {
+    width: 100%; max-width: 680px;
+    background: linear-gradient(180deg, #1a2744, #0f1e3a);
+    border: 1.5px solid #2a4a8a;
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 10px; align-items: center;
+    opacity: .25;
+    transition: opacity .3s, border-color .3s, background .3s, box-shadow .3s;
+  }
+  .reveal-row .rr-num {
+    background: #1a56db; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .82rem; font-weight: 800;
+  }
+  .reveal-row .rr-body { display: flex; flex-direction: column; gap: 2px; }
+  .reveal-row .rr-question { font-size: .78rem; color: #8ab4f8; font-weight: 600; }
+  .reveal-row .rr-answers { display: flex; gap: 14px; align-items: baseline; }
+  .reveal-row .rr-guess {
+    font-size: .88rem; font-weight: 600; color: #6a7a9a;
+    font-style: italic;
+  }
+  .reveal-row .rr-correct {
+    font-size: 1rem; font-weight: 700; color: transparent;
+    text-transform: uppercase; letter-spacing: .5px;
+    transition: color .2s;
+  }
+  .reveal-row .rr-pts {
+    font-size: .88rem; font-weight: 800; color: transparent;
+    transition: color .2s;
+  }
+  .reveal-row.active { opacity: 1; }
+  .reveal-row.hit {
+    opacity: 1;
+    background: linear-gradient(180deg, #1a56db, #1040a0);
+    border-color: #3a7aff;
+    box-shadow: 0 0 18px rgba(26,86,219,.5);
+  }
+  .reveal-row.hit .rr-num { background: #27ae60; }
+  .reveal-row.hit .rr-question { color: #a8c8ff; }
+  .reveal-row.hit .rr-guess { color: #a8d8a8; }
+  .reveal-row.hit .rr-correct { color: #fff; }
+  .reveal-row.hit .rr-pts { color: #f0c040; }
+  .reveal-row.miss {
+    opacity: 1;
+    border-color: #4a4a6a;
+  }
+  .reveal-row.miss .rr-correct { color: #fff; }
+  .reveal-row.miss .rr-pts { color: #6a6a8a; }
+
+  /* number-one celebration flash */
+  .number-one-flash {
+    position: fixed; inset: 0; z-index: 110;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    animation: n1fade 1.6s ease forwards;
+  }
+  .number-one-flash .n1-burst {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at center, rgba(240,165,0,.45) 0%, transparent 70%);
+    animation: n1burst .5s ease forwards;
+  }
+  .number-one-flash .n1-text {
+    position: relative; z-index: 1;
+    font-size: 5rem; font-weight: 900;
+    color: #f0a500;
+    text-shadow: 0 0 40px rgba(240,165,0,.8), 0 0 80px rgba(240,165,0,.4);
+    text-transform: uppercase; letter-spacing: 6px;
+    animation: n1pop .4s cubic-bezier(.17,.67,.16,1.51) forwards;
+  }
+  @keyframes n1burst { from { transform: scale(0); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+  @keyframes n1pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes n1fade { 0%,50% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* reveal total bar */
+  .reveal-total-bar {
+    width: 100%; max-width: 680px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 4px;
+  }
+  .reveal-total-bar .rt-label { font-size: .85rem; font-weight: 700; color: #8ab4f8; text-transform: uppercase; letter-spacing: 1px; }
+  .reveal-total-bar .rt-val { font-size: 1.6rem; font-weight: 900; color: #fff; }
+  .reveal-total-bar .rt-val.positive { color: #f0a500; }
 
   /* ─── WRONG FLASH ─── */
   .wrong-flash {
@@ -393,6 +510,41 @@
   .final-score-card.winner .fs-val { color: #f0a500; }
   .final-score-card .fs-crown { font-size: 1.5rem; }
 
+  /* ─── REVEAL PILLS (next-question overlay) ─── */
+  .reveal-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(30,58,110,.7);
+    border: 1.5px solid #2a4a8a;
+    border-radius: 8px;
+    padding: 7px 12px 7px 8px;
+    min-width: 140px;
+    transition: border-color .2s;
+  }
+  .reveal-pill.earned {
+    border-color: #27ae60;
+    background: rgba(39,174,96,.18);
+  }
+  .reveal-pill.missed {
+    border-color: #4a4a6a;
+    background: rgba(30,30,60,.6);
+    opacity: .7;
+  }
+  .reveal-pill .reveal-num {
+    background: #1a56db; color: #fff;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem; font-weight: 800; flex-shrink: 0;
+  }
+  .reveal-pill.earned .reveal-num { background: #27ae60; }
+  .reveal-pill .reveal-text {
+    font-size: .88rem; font-weight: 600; color: #fff;
+    text-transform: uppercase; letter-spacing: .5px; flex: 1;
+  }
+  .reveal-pill .reveal-pts {
+    font-size: .82rem; font-weight: 800; color: #f0c040;
+  }
+  .reveal-pill.missed .reveal-pts { color: #6a6a8a; }
+
   .hidden { display: none !important; }
 </style>
 </head>
@@ -417,6 +569,10 @@
 <div class="overlay hidden" id="nextQOverlay">
   <h1 id="nextQTitle">Question Complete</h1>
   <h2 id="nextQSub"></h2>
+  <div id="revealedAnswers" style="
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+    max-width:680px; margin: 4px 0 8px;
+  "></div>
   <button class="overlay-btn" onclick="confirmNextQuestion()">Next Question</button>
 </div>
 
@@ -471,31 +627,48 @@
 <div class="game-wrap hidden" id="finalWrap">
   <div class="final-q-indicator" id="finalQIndicator">Final Round — Question 1 of 5</div>
 
+  <!-- summary strip: one cell per question (plain during guessing, no feedback) -->
+  <div class="final-strip" id="finalStrip">
+    <div class="final-cell active" id="fcell0"><span class="cell-num">1</span><span class="cell-icon"></span><span class="cell-pts"></span></div>
+    <div class="final-cell"        id="fcell1"><span class="cell-num">2</span><span class="cell-icon"></span><span class="cell-pts"></span></div>
+    <div class="final-cell"        id="fcell2"><span class="cell-num">3</span><span class="cell-icon"></span><span class="cell-pts"></span></div>
+    <div class="final-cell"        id="fcell3"><span class="cell-num">4</span><span class="cell-icon"></span><span class="cell-pts"></span></div>
+    <div class="final-cell"        id="fcell4"><span class="cell-num">5</span><span class="cell-icon"></span><span class="cell-pts"></span></div>
+  </div>
+
+  <!-- current question -->
   <div class="question-box">
     <h2 id="finalQuestionText">...</h2>
   </div>
 
+  <!-- echo: shows the player's typed answer back to them, no correct/wrong hint -->
+  <div class="final-echo" id="finalEcho">
+    <span class="echo-label">Your answer:</span>
+    <span class="echo-text" id="finalEchoText">—</span>
+  </div>
+
+  <!-- timer -->
   <div class="timer-wrap">
-    <div class="timer-box" id="finalTimerBox">30</div>
+    <div class="timer-box" id="finalTimerBox">45</div>
   </div>
 
-  <div class="final-board">
-    <div class="final-slot" id="fslot0"><span class="final-text"></span><span class="final-points"></span></div>
-    <div class="final-slot" id="fslot1"><span class="final-text"></span><span class="final-points"></span></div>
-    <div class="final-slot" id="fslot2"><span class="final-text"></span><span class="final-points"></span></div>
-    <div class="final-slot" id="fslot3"><span class="final-text"></span><span class="final-points"></span></div>
-    <div class="final-slot" id="fslot4"><span class="final-text"></span><span class="final-points"></span></div>
-    <div class="final-total">
-      <span class="label">Total</span>
-      <span class="val" id="finalTotal">0</span>
-    </div>
-  </div>
-
+  <!-- input -->
   <div class="input-area">
     <button class="btn skip" onclick="finalSkip()">Pass</button>
     <input class="answer-input" id="finalAnswerInput" placeholder="Type your answer..." autocomplete="off" onkeydown="if(event.key==='Enter')finalSubmit()" />
     <button class="btn submit" onclick="finalSubmit()">↑</button>
   </div>
+</div>
+
+<!-- ===================== FINAL REVEAL OVERLAY ===================== -->
+<div class="reveal-overlay hidden" id="finalRevealOverlay">
+  <h1>Results</h1>
+  <div id="revealRows"></div><!-- rows injected by JS -->
+  <div class="reveal-total-bar">
+    <span class="rt-label">Points earned</span>
+    <span class="rt-val" id="revealTotal">0</span>
+  </div>
+  <button class="overlay-btn hidden" id="revealDoneBtn" onclick="revealDone()">Continue</button>
 </div>
 
 <!-- ===================== GAME OVER ===================== -->
@@ -521,8 +694,9 @@ let timerInterval = null;
 let timeLeft = 0;
 let gamePhase = 'idle';    // idle | playing | final | over | paused
 let pendingAdvance = null; // stores the function to call when "Next Question" is clicked
+let earnedSlots = new Set();      // tracks which slots the team actually got this question
 const QUESTIONS_PER_ROUND = 3;
-const TIMER_DURATION = 30;
+const TIMER_DURATION = 45;
 
 // ─── AUDIO ───
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -788,6 +962,7 @@ function pauseForNextQuestion(advanceFn) {
   const t2 = document.getElementById('team2Name').value || 'Team B';
   let subtitle = '';
 
+  // ── determine subtitle ──
   if (advanceFn === advanceQuestion) {
     const nextIdx = currentQIndex + 1;
     if (nextIdx >= QUESTIONS_PER_ROUND) {
@@ -799,6 +974,25 @@ function pauseForNextQuestion(advanceFn) {
   } else {
     const nextFinal = finalQIdx + 1;
     subtitle = nextFinal >= 5 ? 'Game ending after this!' : 'Question ' + (nextFinal + 1) + ' of 5';
+  }
+
+  // ── reveal all remaining slots on the board (regular rounds only) ──
+  const allSlots = document.querySelectorAll('.answer-slot');
+  allSlots.forEach(slot => slot.classList.add('revealed'));
+
+  // ── build the answers list for the overlay ──
+  const q = currentQ;
+  const container = document.getElementById('revealedAnswers');
+  container.innerHTML = '';
+  if (q) {
+    q.answers.forEach((a, i) => {
+      const earnedClass = earnedSlots.has(i) ? 'earned' : 'missed';
+      container.innerHTML += `<div class="reveal-pill ${earnedClass}">
+        <span class="reveal-num">${i + 1}</span>
+        <span class="reveal-text">${a.text}</span>
+        <span class="reveal-pts">${a.points}</span>
+      </div>`;
+    });
   }
 
   document.getElementById('nextQTitle').textContent = 'Question Complete';
@@ -820,6 +1014,7 @@ function loadQuestion() {
   const qIdx = (currentRound - 1) * QUESTIONS_PER_ROUND + currentQIndex;
   currentQ = roundQuestions[qIdx];
   strikes = 0; roundScore = 0; gamePhase = 'playing';
+  earnedSlots = new Set();
   updateUI(); startTimer();
   document.getElementById('answerInput').value = '';
   document.getElementById('answerInput').focus();
@@ -915,6 +1110,7 @@ function submitAnswer() {
     if (fuzzyMatch(guess, a)) {
       matched = true;
       slot.classList.add('revealed');
+      earnedSlots.add(i);
       roundScore += a.points;
       playCorrect(); flashCorrect();
       if (allRevealed()) {
@@ -980,33 +1176,48 @@ function selectTeam(n) {
 }
 
 // ─── FINAL ROUND ───
-let finalQIdx = 0, finalRoundPoints = 0, finalStrikes = 0, finalCurrentQ = null;
+// Phase 1 — GUESSING: 5 questions, one at a time, single shared 45s timer.
+//   Player gives ONE answer per question. NO feedback — no sounds, no correct/wrong.
+//   Answers are stored silently. Strip just advances.
+// Phase 2 — REVEAL: after all 5 (or time up), overlay shows results one by one.
+//   Each row: did the guess match the #1 answer?
+//     HIT  → golden celebration (burst + sound + visual)
+//     MISS → correct answer shown in muted style
+//   After all 5 revealed → total shown, Continue button → game over.
+let finalQIdx = 0, finalCurrentQ = null;
+let finalGuesses = [];   // stores the 5 guesses (or "" if skipped)
 
 function startFinalRound() {
   stopTimer();
   document.getElementById('gameWrap').classList.add('hidden');
   document.getElementById('finalWrap').classList.remove('hidden');
-  finalQIdx = 0; finalRoundPoints = 0; finalStrikes = 0;
+  finalQIdx = 0;
+  finalGuesses = [];
   activeTeam = scores[0] >= scores[1] ? 0 : 1;
+
+  // reset strip cells — plain, no feedback during guessing
+  for (let i = 0; i < 5; i++) {
+    const cell = document.getElementById('fcell' + i);
+    cell.className = 'final-cell' + (i === 0 ? ' active' : '');
+    cell.querySelector('.cell-icon').textContent = '';
+    cell.querySelector('.cell-pts').textContent = '';
+  }
+
+  document.getElementById('finalEchoText').textContent = '—';
   loadFinalQuestion();
+  startFinalTimer();
 }
 
 function loadFinalQuestion() {
   finalCurrentQ = finalQuestions[finalQIdx];
   gamePhase = 'final';
+
   document.getElementById('finalQIndicator').textContent =
     'Final Round — Question ' + (finalQIdx + 1) + ' of 5';
   document.getElementById('finalQuestionText').textContent = finalCurrentQ.question;
-  finalCurrentQ.answers.forEach((a, i) => {
-    const slot = document.getElementById('fslot' + i);
-    slot.classList.remove('revealed');
-    slot.querySelector('.final-text').textContent = a.text;
-    slot.querySelector('.final-points').textContent = a.points;
-  });
-  document.getElementById('finalTotal').textContent = finalRoundPoints;
+  document.getElementById('finalEchoText').textContent = '—';
   document.getElementById('finalAnswerInput').value = '';
   document.getElementById('finalAnswerInput').focus();
-  startFinalTimer();
 }
 
 function startFinalTimer() {
@@ -1025,8 +1236,10 @@ function updateFinalTimerUI() {
 }
 
 function onFinalTimeUp() {
-  gamePhase = 'idle'; playWrong(); flashWrong();
-  setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 1000);
+  // time ran out mid-guessing — fill remaining guesses with empty, go straight to reveal
+  gamePhase = 'idle';
+  while (finalGuesses.length < 5) finalGuesses.push('');
+  startReveal();
 }
 
 function finalSubmit() {
@@ -1036,48 +1249,178 @@ function finalSubmit() {
   if (!guess) return;
   input.value = '';
 
-  let matched = false;
-  finalCurrentQ.answers.forEach((a, i) => {
-    if (matched) return;
-    const slot = document.getElementById('fslot' + i);
-    if (slot.classList.contains('revealed')) return;
-    if (fuzzyMatch(guess, a)) {
-      matched = true;
-      slot.classList.add('revealed');
-      finalRoundPoints += a.points;
-      document.getElementById('finalTotal').textContent = finalRoundPoints;
-      playCorrect(); flashCorrect();
-    }
-  });
+  // store the guess silently — NO feedback
+  finalGuesses.push(guess);
+  document.getElementById('finalEchoText').textContent = guess;
 
-  if (!matched) {
-    finalStrikes++; playWrong(); flashWrong(); showBigX();
-    if (finalStrikes >= 3) {
-      stopTimer(); gamePhase = 'idle';
-      setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 900);
-    }
-  }
-  input.focus();
+  advanceFinalQuestion();
 }
 
 function finalSkip() {
   if (gamePhase !== 'final') return;
-  finalStrikes++; playWrong(); flashWrong(); showBigX();
-  if (finalStrikes >= 3) {
-    stopTimer(); gamePhase = 'idle';
-    setTimeout(() => pauseForNextQuestion(advanceFinalQuestion), 900);
-  }
-  document.getElementById('finalAnswerInput').focus();
+  // skip = store empty guess, advance silently
+  finalGuesses.push('');
+  document.getElementById('finalEchoText').textContent = '(passed)';
+  advanceFinalQuestion();
 }
 
 function advanceFinalQuestion() {
-  finalQIdx++; finalStrikes = 0;
+  // mark current cell as "done" (just remove active, no color yet — reveal does that)
+  document.getElementById('fcell' + finalQIdx).classList.remove('active');
+
+  finalQIdx++;
   if (finalQIdx >= 5) {
-    scores[activeTeam] += finalRoundPoints; updateScoreUI();
-    endGame();
+    // all 5 answered — go to reveal
+    gamePhase = 'idle';
+    stopTimer();
+    setTimeout(() => startReveal(), 800);
   } else {
+    // activate next cell
+    document.getElementById('fcell' + finalQIdx).classList.add('active');
     loadFinalQuestion();
   }
+}
+
+// ─── REVEAL PHASE ───
+function startReveal() {
+  gamePhase = 'reveal';
+  // hide the guessing board, show the overlay
+  document.getElementById('finalWrap').classList.add('hidden');
+  const overlay = document.getElementById('finalRevealOverlay');
+  overlay.classList.remove('hidden');
+
+  // build the 5 rows (all dim/inactive initially)
+  const container = document.getElementById('revealRows');
+  container.innerHTML = '';
+  for (let i = 0; i < 5; i++) {
+    const q = finalQuestions[i];
+    const guess = finalGuesses[i] || '(passed)';
+    container.innerHTML += `
+      <div class="reveal-row" id="rrow${i}">
+        <div class="rr-num">${i + 1}</div>
+        <div class="rr-body">
+          <div class="rr-question">${q.question}</div>
+          <div class="rr-answers">
+            <span class="rr-guess">You: "${guess}"</span>
+            <span class="rr-correct" id="rr-correct${i}"></span>
+          </div>
+        </div>
+        <div class="rr-pts" id="rr-pts${i}"></div>
+      </div>`;
+  }
+
+  document.getElementById('revealTotal').textContent = '0';
+  document.getElementById('revealTotal').classList.remove('positive');
+  document.getElementById('revealDoneBtn').classList.add('hidden');
+
+  // kick off the sequential reveal
+  revealStep(0, 0);
+}
+
+function revealStep(idx, runningTotal) {
+  if (idx >= 5) {
+    // all revealed — show total and button
+    document.getElementById('revealTotal').textContent = runningTotal;
+    if (runningTotal > 0) document.getElementById('revealTotal').classList.add('positive');
+    document.getElementById('revealDoneBtn').classList.add('hidden');
+    // short delay then show button
+    setTimeout(() => document.getElementById('revealDoneBtn').classList.remove('hidden'), 600);
+    return;
+  }
+
+  const q        = finalQuestions[idx];
+  const target   = q.answers[0];                // #1 answer
+  const guess    = finalGuesses[idx] || '';
+  const row      = document.getElementById('rrow' + idx);
+  const isHit    = guess && fuzzyMatch(guess, target);
+
+  // activate this row so it's visible
+  row.classList.add('active');
+
+  // small delay so the row "appears" before the result
+  setTimeout(() => {
+    // fill in the correct answer text and points
+    document.getElementById('rr-correct' + idx).textContent = target.text;
+    document.getElementById('rr-pts' + idx).textContent     = target.points;
+
+    if (isHit) {
+      row.classList.remove('active');
+      row.classList.add('hit');
+      runningTotal += target.points;
+      document.getElementById('revealTotal').textContent = runningTotal;
+      document.getElementById('revealTotal').classList.add('positive');
+
+      // 🏆 NUMBER ONE celebration
+      playNumberOne();
+      showNumberOneFlash();
+    } else {
+      row.classList.remove('active');
+      row.classList.add('miss');
+      playWrong();
+    }
+
+    // next row after a pause
+    setTimeout(() => revealStep(idx + 1, runningTotal), 2200);
+  }, 900);
+}
+
+function revealDone() {
+  // award points to the winning team
+  let earned = 0;
+  for (let i = 0; i < 5; i++) {
+    const target = finalQuestions[i].answers[0];
+    const guess  = finalGuesses[i] || '';
+    if (guess && fuzzyMatch(guess, target)) earned += target.points;
+  }
+  scores[activeTeam] += earned;
+  updateScoreUI();
+
+  // hide overlay → game over
+  document.getElementById('finalRevealOverlay').classList.add('hidden');
+  gamePhase = 'idle';
+  setTimeout(() => endGame(), 600);
+}
+
+// ─── NUMBER ONE celebration sound: triumphant rising fanfare ───
+function playNumberOne() {
+  ensureAudio();
+  const now = audioCtx.currentTime;
+  // chord: stacked fifths with attack
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
+  notes.forEach((freq, i) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq * 0.5, now);          // start an octave low
+    o.frequency.exponentialRampToValueAtTime(freq, now + 0.12); // ramp up fast
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.28 - i * 0.04, now + 0.05); // stagger attack
+    g.gain.setValueAtTime(0.28 - i * 0.04, now + 0.4);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    o.start(now); o.stop(now + 1.3);
+  });
+  // second hit — higher, brighter, 0.3s later
+  const notes2 = [659.25, 783.99, 987.77, 1318.50]; // E5 G5 B5 E6
+  notes2.forEach((freq, i) => {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, now + 0.3);
+    g.gain.setValueAtTime(0, now + 0.3);
+    g.gain.linearRampToValueAtTime(0.22 - i * 0.04, now + 0.38);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
+    o.start(now + 0.3); o.stop(now + 1.5);
+  });
+}
+
+function showNumberOneFlash() {
+  const flash = document.createElement('div');
+  flash.className = 'number-one-flash';
+  flash.innerHTML = '<div class="n1-burst"></div><div class="n1-text">★ #1 ★</div>';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 1700);
 }
 
 // ─── END GAME ───
