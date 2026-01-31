@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Family Feud</title>
+<style>
+  /* ─── RESET & BASE ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', 'Arial Black', sans-serif;
+    background: #0a1628;
+    color: #fff;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ─── STARFIELD BACKGROUND ─── */
+  .bg-dots {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(circle, rgba(60,120,220,.15) 1px, transparent 1px),
+      radial-gradient(circle, rgba(80,140,255,.1) 1px, transparent 1px);
+    background-size: 40px 40px, 70px 70px;
+    background-position: 0 0, 35px 35px;
+    pointer-events: none;
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  .game-wrap {
+    position: relative; z-index: 1;
+    width: 100%; height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; padding: 8px 12px;
+  }
+
+  /* ─── QUESTION BANNER ─── */
+  .question-box {
+    background: linear-gradient(180deg, #1a2744 0%, #0f1e3a 100%);
+    border: 2px solid #2a4a8a;
+    border-radius: 14px;
+    padding: 14px 28px;
+    text-align: center;
+    width: 90%; max-width: 860px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.5);
+  }
+  .question-box h2 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: .5px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.6);
+  }
+
+  /* ─── TIMER ─── */
+  .timer-wrap {
+    display: flex; justify-content: center;
+  }
+  .timer-box {
+    background: #1a56db;
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 800;
+    width: 80px; height: 42px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,.5);
+    transition: background .3s;
+    letter-spacing: 2px;
+  }
+  .timer-box.warning { background: #e67e22; }
+  .timer-box.danger  { background: #c0392b; animation: pulse .5s infinite alternate; }
+  @keyframes pulse { to { transform: scale(1.07); } }
+
+  /* ─── BOARD RING ─── */
+  .board-ring {
+    position: relative;
+    width: 92%; max-width: 880px;
+    padding: 18px 20px 16px;
+    background: linear-gradient(180deg, #162040 0%, #0d1733 100%);
+    border-radius: 50px / 38px;
+    box-shadow:
+      0 0 0 5px #1a1a2e,
+      0 0 0 9px #c07000,
+      0 0 0 13px #f0a500,
+      0 0 0 16px #c07000,
+      0 0 0 20px #0a0f1e,
+      0 0 40px rgba(240,165,0,.3);
+  }
+
+  /* ─── FAMILY FEUD SIDE LOGOS ─── */
+  .side-logo {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 100px; height: 56px;
+    background: linear-gradient(135deg, #1a56db, #0d3a8e);
+    border-radius: 12px 0 0 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 12px rgba(0,0,0,.5);
+    font-size: .82rem; font-weight: 900;
+    color: #f0c040; text-shadow: 1px 1px 2px rgba(0,0,0,.7);
+    letter-spacing: 1px; text-transform: uppercase;
+    line-height: 1.1; text-align: center;
+    z-index: 2;
+  }
+  .side-logo.left  { left: -96px; border-radius: 12px 0 0 12px; }
+  .side-logo.right { right: -96px; border-radius: 0 12px 12px 0; }
+
+  /* ─── ANSWER GRID ─── */
+  .answer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    width: 100%; max-width: 700px;
+    margin: 0 auto;
+  }
+  .answer-slot {
+    background: linear-gradient(180deg, #1e3a6e 0%, #162a52 100%);
+    border: 1.5px solid #2a4a8a;
+    border-radius: 8px;
+    height: 52px;
+    display: flex; align-items: center;
+    padding: 0 16px; gap: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: background .3s, border-color .3s, box-shadow .3s;
+  }
+  .answer-slot .slot-num {
+    background: #1a56db;
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: .88rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  }
+  .answer-slot .slot-text {
+    font-size: 1rem; font-weight: 600;
+    color: transparent;
+    transition: color .2s;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .answer-slot .slot-points {
+    position: absolute; right: 14px;
+    font-size: .9rem; font-weight: 800;
+    color: transparent;
+    transition: color .2s;
+  }
+  /* revealed state */
+  .answer-slot.revealed {
+    background: linear-gradient(180deg, #1a56db 0%, #1040a0 100%);
+    border-color: #3a7aff;
+    box-shadow: 0 0 14px rgba(26,86,219,.5), inset 0 1px 0 rgba(255,255,255,.15);
+  }
+  .answer-slot.revealed .slot-text { color: #fff; }
+  .answer-slot.revealed .slot-points { color: #f0c040; }
+
+  /* ─── SCORES ROW ─── */
+  .scores-row {
+    display: flex; justify-content: space-between;
+    width: 92%; max-width: 880px;
+    margin-top: 4px;
+  }
+  .team-score {
+    background: linear-gradient(180deg, #1a2744, #0f1e3a);
+    border: 1.5px solid #2a4a8a;
+    border-radius: 10px;
+    padding: 6px 22px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .team-score:hover { border-color: #4a8aff; }
+  .team-score.active {
+    border-color: #f0a500;
+    box-shadow: 0 0 12px rgba(240,165,0,.4);
+  }
+  .team-score .team-label {
+    font-size: .85rem; font-weight: 700; color: #8ab4f8; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .team-score .team-name-input {
+    background: transparent; border: none; border-bottom: 1px solid #2a4a8a;
+    color: #fff; font-size: .85rem; font-weight: 700; width: 80px;
+    outline: none; text-align: center;
+  }
+  .team-score .team-name-input:focus { border-bottom-color: #4a8aff; }
+  .team-score .score-val {
+    font-size: 1.4rem; font-weight: 800; color: #fff;
+    min-width: 44px; text-align: right;
+  }
+
+  /* ─── STRIKES ─── */
+  .strikes-row {
+    display: flex; gap: 10px; justify-content: center;
+  }
+  .strike {
+    width: 34px; height: 34px;
+    border: 2.5px solid #2a4a8a;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 900;
+    color: transparent;
+    background: #0f1e3a;
+    transition: all .3s;
+  }
+  .strike.active {
+    border-color: #c0392b;
+    color: #e74c3c;
+    background: #2a0a0a;
+    box-shadow: 0 0 12px rgba(231,76,60,.5);
+    animation: strikeIn .3s ease;
+  }
+  @keyframes strikeIn { from { transform: scale(1.4); } to { transform: scale(1); } }
+
+  /* ─── INPUT AREA ─── */
+  .input-area {
+    display: flex; gap: 8px; align-items: center;
+    width: 92%; max-width: 880px;
+  }
+  .btn {
+    background: #1a56db;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: .95rem; font-weight: 700;
+    padding: 0 18px; height: 46px;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    text-transform: uppercase; letter-spacing: 1px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  }
+  .btn:hover { background: #2266ec; }
+  .btn:active { transform: scale(.96); }
+  .btn.skip { min-width: 80px; }
+  .btn.submit { min-width: 52px; font-size: 1.2rem; }
+  .answer-input {
+    flex: 1;
+    background: #fff;
+    border: none;
+    border-radius: 8px;
+    height: 46px;
+    padding: 0 16px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1a2744;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .answer-input::placeholder { color: #8a9bb5; }
+
+  /* ─── ROUND INDICATOR ─── */
+  .round-indicator {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #f0a500;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-align: center;
+  }
+
+  /* ─── OVERLAY SCREENS ─── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(5,10,25,.92);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 24px;
+    animation: fadeIn .3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .overlay h1 {
+    font-size: 2.8rem; font-weight: 900;
+    color: #f0a500;
+    text-shadow: 0 0 30px rgba(240,165,0,.4);
+    text-transform: uppercase; letter-spacing: 3px;
+  }
+  .overlay h2 { font-size: 1.3rem; color: #8ab4f8; font-weight: 600; }
+  .overlay .overlay-btn {
+    background: linear-gradient(135deg, #1a56db, #0d3a8e);
+    color: #fff; border: none; border-radius: 10px;
+    padding: 14px 40px; font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+    box-shadow: 0 4px 18px rgba(26,86,219,.5);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .overlay .overlay-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(26,86,219,.6); }
+
+  /* ─── FINAL ROUND LAYOUT ─── */
+  .final-board {
+    width: 92%; max-width: 700px;
+    background: linear-gradient(180deg, #162040 0%, #0d1733 100%);
+    border-radius: 50px / 38px;
+    box-shadow:
+      0 0 0 5px #1a1a2e,
+      0 0 0 9px #c07000,
+      0 0 0 13px #f0a500,
+      0 0 0 16px #c07000,
+      0 0 0 20px #0a0f1e,
+      0 0 40px rgba(240,165,0,.3);
+    padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .final-slot {
+    background: linear-gradient(180deg, #1e3a6e 0%, #162a52 100%);
+    border: 1.5px solid #2a4a8a;
+    border-radius: 8px;
+    height: 46px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    transition: background .3s, border-color .3s, box-shadow .3s;
+  }
+  .final-slot .final-text {
+    font-size: .95rem; font-weight: 600;
+    color: transparent; text-transform: uppercase; letter-spacing: 1px;
+    transition: color .2s;
+  }
+  .final-slot .final-points {
+    font-size: .9rem; font-weight: 800; color: transparent;
+    transition: color .2s;
+  }
+  .final-slot.revealed {
+    background: linear-gradient(180deg, #1a56db 0%, #1040a0 100%);
+    border-color: #3a7aff;
+    box-shadow: 0 0 14px rgba(26,86,219,.5);
+  }
+  .final-slot.revealed .final-text { color: #fff; }
+  .final-slot.revealed .final-points { color: #f0c040; }
+
+  .final-total {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 10px; padding: 4px 4px 0;
+  }
+  .final-total .label { font-size: .9rem; font-weight: 700; color: #8ab4f8; text-transform: uppercase; letter-spacing: 1px; }
+  .final-total .val { font-size: 1.3rem; font-weight: 800; color: #fff; min-width: 40px; text-align: right; }
+
+  /* ─── FINAL ROUND Q COUNTER ─── */
+  .final-q-indicator {
+    font-size: .78rem; font-weight: 700;
+    color: #f0a500; text-transform: uppercase; letter-spacing: 2px;
+    text-align: center;
+  }
+
+  /* ─── WRONG FLASH ─── */
+  .wrong-flash {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(192,57,43,.25);
+    pointer-events: none;
+    animation: wrongFlash .4s ease forwards;
+  }
+  @keyframes wrongFlash { to { opacity: 0; } }
+
+  /* ─── CORRECT FLASH ─── */
+  .correct-flash {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(39,174,96,.2);
+    pointer-events: none;
+    animation: wrongFlash .35s ease forwards;
+  }
+
+  /* ─── BIG X OVERLAY ─── */
+  .big-x {
+    position: fixed; inset: 0; z-index: 60;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+    animation: xFade .6s ease forwards;
+  }
+  .big-x span {
+    font-size: 16rem; font-weight: 900; color: #e74c3c;
+    text-shadow: 0 0 60px rgba(231,76,60,.7);
+    animation: xIn .25s ease;
+  }
+  @keyframes xIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes xFade { 0% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ─── GAME OVER SCORES ─── */
+  .final-scores {
+    display: flex; gap: 40px; margin-top: 8px;
+  }
+  .final-score-card {
+    background: linear-gradient(180deg, #1a2744, #0f1e3a);
+    border: 2px solid #2a4a8a;
+    border-radius: 14px;
+    padding: 18px 30px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .final-score-card.winner { border-color: #f0a500; box-shadow: 0 0 20px rgba(240,165,0,.4); }
+  .final-score-card .fs-name { font-size: 1rem; font-weight: 700; color: #8ab4f8; margin-bottom: 4px; }
+  .final-score-card .fs-val { font-size: 2.2rem; font-weight: 900; color: #fff; }
+  .final-score-card.winner .fs-val { color: #f0a500; }
+  .final-score-card .fs-crown { font-size: 1.5rem; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="bg-dots"></div>
+
+<!-- ===================== START SCREEN ===================== -->
+<div class="overlay" id="startScreen">
+  <h1>Family Feud</h1>
+  <h2>Classroom Edition</h2>
+  <button class="overlay-btn" onclick="startGame()">Start Game</button>
+</div>
+
+<!-- ===================== ROUND TRANSITION ===================== -->
+<div class="overlay hidden" id="roundTransition">
+  <h1 id="transitionTitle">Round 1</h1>
+  <h2 id="transitionSub">3 questions • 30 seconds each</h2>
+  <button class="overlay-btn" onclick="beginRound()">Go!</button>
+</div>
+
+<!-- ===================== MAIN GAME ===================== -->
+<div class="game-wrap hidden" id="gameWrap">
+  <div class="round-indicator" id="roundIndicator">Round 1 — Question 1 of 3</div>
+
+  <div class="question-box">
+    <h2 id="questionText">...</h2>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="timer-box" id="timerBox">30</div>
+  </div>
+
+  <div class="board-ring">
+    <div class="side-logo left">FAMILY<br>FEUD</div>
+    <div class="side-logo right">FAMILY<br>FEUD</div>
+    <div class="answer-grid" id="answerGrid">
+      <!-- slots injected by JS -->
+    </div>
+  </div>
+
+  <div class="scores-row">
+    <div class="team-score active" id="team1Card" onclick="selectTeam(1)">
+      <div>
+        <div class="team-label">Team 1</div>
+        <input class="team-name-input" id="team1Name" value="Team A" />
+      </div>
+      <div class="score-val" id="team1Score">0</div>
+    </div>
+    <div class="strikes-row" id="strikesRow">
+      <div class="strike" id="strike1">✕</div>
+      <div class="strike" id="strike2">✕</div>
+      <div class="strike" id="strike3">✕</div>
+    </div>
+    <div class="team-score" id="team2Card" onclick="selectTeam(2)">
+      <div>
+        <div class="team-label">Team 2</div>
+        <input class="team-name-input" id="team2Name" value="Team B" />
+      </div>
+      <div class="score-val" id="team2Score">0</div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <button class="btn skip" onclick="skipAnswer()">Skip</button>
+    <input class="answer-input" id="answerInput" placeholder="Type your answer..." autocomplete="off" onkeydown="if(event.key==='Enter')submitAnswer()" />
+    <button class="btn submit" onclick="submitAnswer()">↑</button>
+  </div>
+</div>
+
+<!-- ===================== FINAL ROUND ===================== -->
+<div class="game-wrap hidden" id="finalWrap">
+  <div class="final-q-indicator" id="finalQIndicator">Final Round — Question 1 of 5</div>
+
+  <div class="question-box">
+    <h2 id="finalQuestionText">...</h2>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="timer-box" id="finalTimerBox">30</div>
+  </div>
+
+  <div class="final-board">
+    <div class="final-slot" id="fslot0"><span class="final-text"></span><span class="final-points"></span></div>
+    <div class="final-slot" id="fslot1"><span class="final-text"></span><span class="final-points"></span></div>
+    <div class="final-slot" id="fslot2"><span class="final-text"></span><span class="final-points"></span></div>
+    <div class="final-slot" id="fslot3"><span class="final-text"></span><span class="final-points"></span></div>
+    <div class="final-slot" id="fslot4"><span class="final-text"></span><span class="final-points"></span></div>
+    <div class="final-total">
+      <span class="label">Total</span>
+      <span class="val" id="finalTotal">0</span>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <button class="btn skip" onclick="finalSkip()">Pass</button>
+    <input class="answer-input" id="finalAnswerInput" placeholder="Type your answer..." autocomplete="off" onkeydown="if(event.key==='Enter')finalSubmit()" />
+    <button class="btn submit" onclick="finalSubmit()">↑</button>
+  </div>
+</div>
+
+<!-- ===================== GAME OVER ===================== -->
+<div class="overlay hidden" id="gameOverScreen">
+  <h1>Game Over!</h1>
+  <div class="final-scores" id="finalScores"></div>
+  <button class="overlay-btn" onclick="restartGame()">Play Again</button>
+</div>
+
+<script>
+// ===================== STATE =====================
+let questionsData = null;
+let roundQuestions = [];   // shuffled questions for rounds 1-3
+let finalQuestions = [];   // shuffled final round questions
+let currentRound = 1;      // 1, 2, 3, or 'final'
+let currentQIndex = 0;     // index within current round
+let currentQ = null;       // active question object
+let scores = [0, 0];       // team 1 & 2
+let strikes = 0;
+let activeTeam = 0;        // 0 or 1
+let roundScore = 0;        // points earned this question
+let timerInterval = null;
+let timeLeft = 0;
+let gamePhase = 'idle';    // idle | playing | final | over
+const QUESTIONS_PER_ROUND = 3;
+const TIMER_DURATION = 30;
+
+// ─── AUDIO (Web Audio API) ───
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playCorrect() {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime);
+  o.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.08);
+  g.gain.setValueAtTime(0.35, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  o.start(); o.stop(audioCtx.currentTime + 0.3);
+}
+
+function playWrong() {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(200, audioCtx.currentTime);
+  o.frequency.setValueAtTime(120, audioCtx.currentTime + 0.15);
+  g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+  o.start(); o.stop(audioCtx.currentTime + 0.45);
+}
+
+function playTimerWarning() {
+  ensureAudio();
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type = 'sine'; o.frequency.setValueAtTime(440, audioCtx.currentTime);
+  g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+  o.start(); o.stop(audioCtx.currentTime + 0.18);
+}
+
+// ─── FLASH EFFECTS ───
+function flashCorrect() {
+  const el = document.createElement('div');
+  el.className = 'correct-flash';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 400);
+}
+function flashWrong() {
+  const el = document.createElement('div');
+  el.className = 'wrong-flash';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 450);
+}
+function showBigX() {
+  const el = document.createElement('div');
+  el.className = 'big-x';
+  el.innerHTML = '<span>✕</span>';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 650);
+}
+
+// ─── SHUFFLE ───
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ─── LOAD DATA & START ───
+async function loadQuestions() {
+  const res = await fetch('questions.json');
+  questionsData = await res.json();
+}
+
+function startGame() {
+  roundQuestions = shuffle(questionsData.rounds);
+  finalQuestions = shuffle(questionsData.finalRound);
+  scores = [0, 0];
+  currentRound = 1;
+  currentQIndex = 0;
+  activeTeam = 0;
+  updateScoreUI();
+  document.getElementById('startScreen').classList.add('hidden');
+  showRoundTransition();
+}
+
+// ─── ROUND TRANSITION ───
+function showRoundTransition() {
+  const el = document.getElementById('roundTransition');
+  document.getElementById('gameWrap').classList.add('hidden');
+  document.getElementById('finalWrap').classList.add('hidden');
+  el.classList.remove('hidden');
+  document.getElementById('transitionTitle').textContent = 'Round ' + currentRound;
+  document.getElementById('transitionSub').textContent =
+    QUESTIONS_PER_ROUND + ' questions • ' + TIMER_DURATION + ' seconds each';
+}
+
+function beginRound() {
+  document.getElementById('roundTransition').classList.add('hidden');
+  document.getElementById('gameWrap').classList.remove('hidden');
+  currentQIndex = 0;
+  loadQuestion();
+}
+
+// ─── LOAD QUESTION ───
+function loadQuestion() {
+  const qIdx = (currentRound - 1) * QUESTIONS_PER_ROUND + currentQIndex;
+  currentQ = roundQuestions[qIdx];
+  strikes = 0;
+  roundScore = 0;
+  gamePhase = 'playing';
+  updateUI();
+  startTimer();
+  document.getElementById('answerInput').value = '';
+  document.getElementById('answerInput').focus();
+}
+
+function updateUI() {
+  // round indicator
+  document.getElementById('roundIndicator').textContent =
+    'Round ' + currentRound + ' — Question ' + (currentQIndex + 1) + ' of ' + QUESTIONS_PER_ROUND;
+  // question
+  document.getElementById('questionText').textContent = currentQ.question;
+  // answer grid
+  const grid = document.getElementById('answerGrid');
+  grid.innerHTML = '';
+  currentQ.answers.forEach((a, i) => {
+    grid.innerHTML += `
+      <div class="answer-slot" id="slot${i}">
+        <div class="slot-num">${i + 1}</div>
+        <div class="slot-text">${a.text}</div>
+        <div class="slot-points">${a.points}</div>
+      </div>`;
+  });
+  // strikes
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
+  }
+  // active team highlight
+  document.getElementById('team1Card').classList.toggle('active', activeTeam === 0);
+  document.getElementById('team2Card').classList.toggle('active', activeTeam === 1);
+}
+
+// ─── TIMER ───
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIMER_DURATION;
+  updateTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateTimerUI();
+    if (timeLeft <= 5 && timeLeft > 0) playTimerWarning();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      onTimeUp();
+    }
+  }, 1000);
+}
+
+function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
+
+function updateTimerUI() {
+  const box = document.getElementById('timerBox');
+  box.textContent = timeLeft;
+  box.className = 'timer-box';
+  if (timeLeft <= 10) box.classList.add('warning');
+  if (timeLeft <= 5)  { box.classList.remove('warning'); box.classList.add('danger'); }
+}
+
+function onTimeUp() {
+  gamePhase = 'idle';
+  playWrong();
+  flashWrong();
+  // award points to active team
+  scores[activeTeam] += roundScore;
+  updateScoreUI();
+  setTimeout(() => advanceQuestion(), 1200);
+}
+
+// ─── ANSWER LOGIC ───
+function normalise(str) {
+  return str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
+
+function fuzzyMatch(input, target) {
+  const ni = normalise(input);
+  const nt = normalise(target);
+  if (ni === nt) return true;
+  if (ni.includes(nt) || nt.includes(ni)) return true;
+  // simple levenshtein for short strings
+  if (ni.length > 2 && nt.length > 2) {
+    const dist = levenshtein(ni, nt);
+    const maxLen = Math.max(ni.length, nt.length);
+    if (dist / maxLen <= 0.4) return true;
+  }
+  return false;
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] :
+        1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function submitAnswer() {
+  if (gamePhase !== 'playing') return;
+  const input = document.getElementById('answerInput');
+  const guess = input.value.trim();
+  if (!guess) return;
+  input.value = '';
+
+  // check against unrevealed answers
+  let matched = false;
+  currentQ.answers.forEach((a, i) => {
+    if (matched) return;
+    const slot = document.getElementById('slot' + i);
+    if (slot.classList.contains('revealed')) return;
+    if (fuzzyMatch(guess, a.text)) {
+      matched = true;
+      slot.classList.add('revealed');
+      roundScore += a.points;
+      playCorrect();
+      flashCorrect();
+      // check if all revealed
+      if (allRevealed()) {
+        stopTimer();
+        scores[activeTeam] += roundScore;
+        updateScoreUI();
+        setTimeout(() => advanceQuestion(), 1000);
+      }
+    }
+  });
+
+  if (!matched) {
+    strikes++;
+    playWrong();
+    flashWrong();
+    showBigX();
+    for (let i = 0; i < 3; i++) {
+      document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
+    }
+    if (strikes >= 3) {
+      stopTimer();
+      gamePhase = 'idle';
+      scores[activeTeam] += roundScore;
+      updateScoreUI();
+      setTimeout(() => advanceQuestion(), 900);
+    }
+  }
+  input.focus();
+}
+
+function skipAnswer() {
+  if (gamePhase !== 'playing') return;
+  // skip = wrong answer (strike)
+  strikes++;
+  playWrong();
+  flashWrong();
+  showBigX();
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('strike' + (i + 1)).classList.toggle('active', i < strikes);
+  }
+  if (strikes >= 3) {
+    stopTimer();
+    gamePhase = 'idle';
+    scores[activeTeam] += roundScore;
+    updateScoreUI();
+    setTimeout(() => advanceQuestion(), 900);
+  }
+  document.getElementById('answerInput').focus();
+}
+
+function allRevealed() {
+  return currentQ.answers.every((_, i) => document.getElementById('slot' + i).classList.contains('revealed'));
+}
+
+// ─── ADVANCE QUESTION / ROUND ───
+function advanceQuestion() {
+  currentQIndex++;
+  // alternate team after each question
+  activeTeam = activeTeam === 0 ? 1 : 0;
+  if (currentQIndex >= QUESTIONS_PER_ROUND) {
+    currentRound++;
+    currentQIndex = 0;
+    if (currentRound > 3) {
+      // start final round
+      startFinalRound();
+    } else {
+      showRoundTransition();
+    }
+  } else {
+    loadQuestion();
+  }
+}
+
+// ─── SCORE UI ───
+function updateScoreUI() {
+  document.getElementById('team1Score').textContent = scores[0];
+  document.getElementById('team2Score').textContent = scores[1];
+}
+
+function selectTeam(n) {
+  activeTeam = n - 1;
+  document.getElementById('team1Card').classList.toggle('active', activeTeam === 0);
+  document.getElementById('team2Card').classList.toggle('active', activeTeam === 1);
+}
+
+// ─── FINAL ROUND ───
+let finalQIdx = 0;
+let finalRoundPoints = 0;
+let finalStrikes = 0;
+let finalCurrentQ = null;
+
+function startFinalRound() {
+  stopTimer();
+  document.getElementById('gameWrap').classList.add('hidden');
+  document.getElementById('finalWrap').classList.remove('hidden');
+  finalQIdx = 0;
+  finalRoundPoints = 0;
+  finalStrikes = 0;
+  // determine which team plays final (higher score)
+  activeTeam = scores[0] >= scores[1] ? 0 : 1;
+  loadFinalQuestion();
+}
+
+function loadFinalQuestion() {
+  finalCurrentQ = finalQuestions[finalQIdx];
+  gamePhase = 'final';
+  document.getElementById('finalQIndicator').textContent =
+    'Final Round — Question ' + (finalQIdx + 1) + ' of 5';
+  document.getElementById('finalQuestionText').textContent = finalCurrentQ.question;
+  // reset slots
+  finalCurrentQ.answers.forEach((a, i) => {
+    const slot = document.getElementById('fslot' + i);
+    slot.classList.remove('revealed');
+    slot.querySelector('.final-text').textContent = a.text;
+    slot.querySelector('.final-points').textContent = a.points;
+  });
+  document.getElementById('finalTotal').textContent = finalRoundPoints;
+  document.getElementById('finalAnswerInput').value = '';
+  document.getElementById('finalAnswerInput').focus();
+  // timer
+  startFinalTimer();
+}
+
+function startFinalTimer() {
+  clearInterval(timerInterval);
+  timeLeft = TIMER_DURATION;
+  updateFinalTimerUI();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateFinalTimerUI();
+    if (timeLeft <= 5 && timeLeft > 0) playTimerWarning();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      onFinalTimeUp();
+    }
+  }, 1000);
+}
+
+function updateFinalTimerUI() {
+  const box = document.getElementById('finalTimerBox');
+  box.textContent = timeLeft;
+  box.className = 'timer-box';
+  if (timeLeft <= 10) box.classList.add('warning');
+  if (timeLeft <= 5)  { box.classList.remove('warning'); box.classList.add('danger'); }
+}
+
+function onFinalTimeUp() {
+  gamePhase = 'idle';
+  playWrong();
+  flashWrong();
+  setTimeout(() => advanceFinalQuestion(), 1000);
+}
+
+function finalSubmit() {
+  if (gamePhase !== 'final') return;
+  const input = document.getElementById('finalAnswerInput');
+  const guess = input.value.trim();
+  if (!guess) return;
+  input.value = '';
+
+  let matched = false;
+  finalCurrentQ.answers.forEach((a, i) => {
+    if (matched) return;
+    const slot = document.getElementById('fslot' + i);
+    if (slot.classList.contains('revealed')) return;
+    if (fuzzyMatch(guess, a.text)) {
+      matched = true;
+      slot.classList.add('revealed');
+      finalRoundPoints += a.points;
+      document.getElementById('finalTotal').textContent = finalRoundPoints;
+      playCorrect();
+      flashCorrect();
+    }
+  });
+
+  if (!matched) {
+    finalStrikes++;
+    playWrong();
+    flashWrong();
+    showBigX();
+    if (finalStrikes >= 3) {
+      stopTimer();
+      gamePhase = 'idle';
+      setTimeout(() => advanceFinalQuestion(), 900);
+    }
+  }
+  input.focus();
+}
+
+function finalSkip() {
+  if (gamePhase !== 'final') return;
+  finalStrikes++;
+  playWrong();
+  flashWrong();
+  showBigX();
+  if (finalStrikes >= 3) {
+    stopTimer();
+    gamePhase = 'idle';
+    setTimeout(() => advanceFinalQuestion(), 900);
+  }
+  document.getElementById('finalAnswerInput').focus();
+}
+
+function advanceFinalQuestion() {
+  finalQIdx++;
+  finalStrikes = 0;
+  if (finalQIdx >= 5) {
+    // final round done — add points to active team
+    scores[activeTeam] += finalRoundPoints;
+    updateScoreUI();
+    endGame();
+  } else {
+    loadFinalQuestion();
+  }
+}
+
+// ─── END GAME ───
+function endGame() {
+  stopTimer();
+  gamePhase = 'over';
+  document.getElementById('finalWrap').classList.add('hidden');
+  const container = document.getElementById('finalScores');
+  const t1 = document.getElementById('team1Name').value || 'Team A';
+  const t2 = document.getElementById('team2Name').value || 'Team B';
+  const winner = scores[0] >= scores[1] ? 0 : 1;
+  container.innerHTML = `
+    <div class="final-score-card ${winner===0?'winner':''}">
+      ${winner===0?'<div class="fs-crown">👑</div>':''}
+      <div class="fs-name">${t1}</div>
+      <div class="fs-val">${scores[0]}</div>
+    </div>
+    <div class="final-score-card ${winner===1?'winner':''}">
+      ${winner===1?'<div class="fs-crown">👑</div>':''}
+      <div class="fs-name">${t2}</div>
+      <div class="fs-val">${scores[1]}</div>
+    </div>`;
+  document.getElementById('gameOverScreen').classList.remove('hidden');
+}
+
+function restartGame() {
+  document.getElementById('gameOverScreen').classList.add('hidden');
+  document.getElementById('finalWrap').classList.add('hidden');
+  document.getElementById('gameWrap').classList.add('hidden');
+  scores = [0, 0];
+  currentRound = 1;
+  currentQIndex = 0;
+  activeTeam = 0;
+  updateScoreUI();
+  roundQuestions = shuffle(questionsData.rounds);
+  finalQuestions = shuffle(questionsData.finalRound);
+  showRoundTransition();
+}
+
+// ─── INIT ───
+loadQuestions().then(() => {
+  // ready — start screen is visible
+}).catch(err => {
+  document.getElementById('startScreen').innerHTML =
+    '<h1 style="color:#e74c3c">Error</h1><h2>Could not load questions.json<br><small>' + err.message + '</small></h2>';
+});
+</script>
+</body>
+</html>

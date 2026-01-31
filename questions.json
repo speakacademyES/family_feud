@@ -1,0 +1,155 @@
+{
+  "rounds": [
+    {
+      "question": "Name something that gets shredded.",
+      "answers": [
+        { "text": "Paper", "points": 55 },
+        { "text": "Cheese", "points": 42 },
+        { "text": "Documents", "points": 30 },
+        { "text": "Wood", "points": 22 },
+        { "text": "Clothes", "points": 12 },
+        { "text": "Guitar", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name something people swallow without chewing.",
+      "answers": [
+        { "text": "Water", "points": 55 },
+        { "text": "Pills", "points": 42 },
+        { "text": "Gum", "points": 30 },
+        { "text": "Juice", "points": 22 },
+        { "text": "Jello", "points": 12 },
+        { "text": "Soup", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name a reason you might be late to work.",
+      "answers": [
+        { "text": "Traffic", "points": 55 },
+        { "text": "Overslept", "points": 42 },
+        { "text": "Car trouble", "points": 30 },
+        { "text": "Bad weather", "points": 22 },
+        { "text": "Lost my keys", "points": 12 },
+        { "text": "Long line at coffee shop", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name something you find in a bathroom.",
+      "answers": [
+        { "text": "Toothbrush", "points": 55 },
+        { "text": "Toilet", "points": 42 },
+        { "text": "Towel", "points": 30 },
+        { "text": "Soap", "points": 22 },
+        { "text": "Mirror", "points": 12 },
+        { "text": "Shower curtain", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name a sport you can play alone.",
+      "answers": [
+        { "text": "Golf", "points": 55 },
+        { "text": "Tennis", "points": 42 },
+        { "text": "Swimming", "points": 30 },
+        { "text": "Bowling", "points": 22 },
+        { "text": "Running", "points": 12 },
+        { "text": "Archery", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name something that has hands.",
+      "answers": [
+        { "text": "Clock", "points": 55 },
+        { "text": "Person", "points": 42 },
+        { "text": "Watch", "points": 30 },
+        { "text": "Monkey", "points": 22 },
+        { "text": "Puppet", "points": 12 },
+        { "text": "Statue", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name something you bring to a party.",
+      "answers": [
+        { "text": "Food", "points": 55 },
+        { "text": "Drinks", "points": 42 },
+        { "text": "A gift", "points": 30 },
+        { "text": "Music", "points": 22 },
+        { "text": "Friends", "points": 12 },
+        { "text": "A game", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name something you do before bed.",
+      "answers": [
+        { "text": "Brush teeth", "points": 55 },
+        { "text": "Read", "points": 42 },
+        { "text": "Watch TV", "points": 30 },
+        { "text": "Shower", "points": 22 },
+        { "text": "Check phone", "points": 12 },
+        { "text": "Set an alarm", "points": 8 }
+      ]
+    },
+    {
+      "question": "Name a type of dance.",
+      "answers": [
+        { "text": "Salsa", "points": 55 },
+        { "text": "Ballet", "points": 42 },
+        { "text": "Hip hop", "points": 30 },
+        { "text": "Waltz", "points": 22 },
+        { "text": "Tango", "points": 12 },
+        { "text": "Breakdance", "points": 8 }
+      ]
+    }
+  ],
+  "finalRound": [
+    {
+      "question": "Name a country in Europe.",
+      "answers": [
+        { "text": "France", "points": 20 },
+        { "text": "Germany", "points": 18 },
+        { "text": "Italy", "points": 16 },
+        { "text": "Spain", "points": 14 },
+        { "text": "England", "points": 12 }
+      ]
+    },
+    {
+      "question": "Name something that is green.",
+      "answers": [
+        { "text": "Grass", "points": 20 },
+        { "text": "Tree", "points": 18 },
+        { "text": "Frog", "points": 16 },
+        { "text": "Broccoli", "points": 14 },
+        { "text": "Avocado", "points": 12 }
+      ]
+    },
+    {
+      "question": "Name a famous movie.",
+      "answers": [
+        { "text": "Titanic", "points": 20 },
+        { "text": "Star Wars", "points": 18 },
+        { "text": "The Godfather", "points": 16 },
+        { "text": "Jurassic Park", "points": 14 },
+        { "text": "Avatar", "points": 12 }
+      ]
+    },
+    {
+      "question": "Name something with wheels.",
+      "answers": [
+        { "text": "Car", "points": 20 },
+        { "text": "Bicycle", "points": 18 },
+        { "text": "Bus", "points": 16 },
+        { "text": "Shopping cart", "points": 14 },
+        { "text": "Skateboard", "points": 12 }
+      ]
+    },
+    {
+      "question": "Name an animal that can fly.",
+      "answers": [
+        { "text": "Bird", "points": 20 },
+        { "text": "Bat", "points": 18 },
+        { "text": "Butterfly", "points": 16 },
+        { "text": "Bee", "points": 14 },
+        { "text": "Dragonfly", "points": 12 }
+      ]
+    }
+  ]
+}
