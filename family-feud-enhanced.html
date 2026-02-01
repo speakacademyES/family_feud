@@ -1302,15 +1302,49 @@ function parseQuestionsJSON(raw) {
   let id = 0;
 
   for (const [question, answersArray] of Object.entries(raw)) {
-    if (!answersArray || answersArray.length < 2) continue;
+    // Skip if not valid
+    if (!answersArray || !Array.isArray(answersArray) || answersArray.length < 2) {
+      console.warn(`Skipping invalid question: "${question}"`, answersArray);
+      continue;
+    }
     
-    const answers = answersArray.map(([text, points]) => ({ text, points }));
-    const questionObj = { id: id++, question, answers };
+    // Parse answers with validation
+    const answers = [];
+    for (let i = 0; i < answersArray.length; i++) {
+      const answerItem = answersArray[i];
+      
+      // Validate each answer is an array with [text, points]
+      if (!Array.isArray(answerItem) || answerItem.length < 2) {
+        console.warn(`Skipping invalid answer in "${question}":`, answerItem);
+        continue;
+      }
+      
+      const [text, points] = answerItem;
+      
+      // Validate text is string and points is number
+      if (typeof text !== 'string' || typeof points !== 'number') {
+        console.warn(`Skipping malformed answer in "${question}":`, answerItem);
+        continue;
+      }
+      
+      answers.push({ text, points });
+    }
     
-    rounds.push(questionObj);
-    finalRound.push(questionObj);
+    // Only add question if we have at least 2 valid answers
+    if (answers.length >= 2) {
+      const questionObj = { id: id++, question, answers };
+      rounds.push(questionObj);
+      finalRound.push(questionObj);
+    } else {
+      console.warn(`Question "${question}" has fewer than 2 valid answers, skipping`);
+    }
   }
 
+  if (rounds.length === 0) {
+    throw new Error('No valid questions found in JSON file. Please check the format.');
+  }
+
+  console.log(`Loaded ${rounds.length} questions successfully`);
   return { rounds, finalRound };
 }
 
