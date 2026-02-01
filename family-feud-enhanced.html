@@ -915,6 +915,14 @@
         <span class="setting-label">Final Round Multiplier:</span>
         <input type="number" class="setting-input" id="finalMultiplier" min="1" max="5" value="2" step="0.5">
       </div>
+      <div class="setting-row">
+        <span class="setting-label">Answer Range (Min-Max):</span>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <input type="number" class="setting-input" id="minAnswers" min="2" max="8" value="2" style="width: 60px;">
+          <span style="color: #8ab4f8;">–</span>
+          <input type="number" class="setting-input" id="maxAnswers" min="2" max="8" value="8" style="width: 60px;">
+        </div>
+      </div>
     </div>
   </div>
 
@@ -992,7 +1000,7 @@
 <div class="overlay hidden" id="finalWrap">
   <div class="final-header">
     <h2>🏆 Final Round</h2>
-    <p>Answer 5 rapid-fire questions — only #1 answers count!</p>
+    <p>Answer 5 rapid-fire questions — any correct answer scores points!</p>
   </div>
 
   <div class="question-box">
@@ -1100,6 +1108,8 @@ let QUESTIONS_PER_ROUND = 2;
 let TIMER_DURATION = 45;
 let MAX_STRIKES = 3;
 let FINAL_MULTIPLIER = 2;
+let MIN_ANSWERS = 2;
+let MAX_ANSWERS = 8;
 
 // Question pools
 let questionsData = null;
@@ -1330,21 +1340,21 @@ function parseQuestionsJSON(raw) {
       answers.push({ text, points });
     }
     
-    // Only add question if we have at least 2 valid answers
-    if (answers.length >= 2) {
+    // Only add question if answers are within the specified range
+    if (answers.length >= MIN_ANSWERS && answers.length <= MAX_ANSWERS) {
       const questionObj = { id: id++, question, answers };
       rounds.push(questionObj);
       finalRound.push(questionObj);
     } else {
-      console.warn(`Question "${question}" has fewer than 2 valid answers, skipping`);
+      console.warn(`Question "${question}" has ${answers.length} answers (outside range ${MIN_ANSWERS}-${MAX_ANSWERS}), skipping`);
     }
   }
 
   if (rounds.length === 0) {
-    throw new Error('No valid questions found in JSON file. Please check the format.');
+    throw new Error(`No questions found with ${MIN_ANSWERS}-${MAX_ANSWERS} answers. Try adjusting the answer range in settings.`);
   }
 
-  console.log(`Loaded ${rounds.length} questions successfully`);
+  console.log(`Loaded ${rounds.length} questions (${MIN_ANSWERS}-${MAX_ANSWERS} answers each)`);
   return { rounds, finalRound };
 }
 
@@ -1431,6 +1441,14 @@ async function startGame() {
   TIMER_DURATION = parseInt(document.getElementById('timerDuration').value);
   MAX_STRIKES = parseInt(document.getElementById('maxStrikes').value);
   FINAL_MULTIPLIER = parseFloat(document.getElementById('finalMultiplier').value);
+  MIN_ANSWERS = parseInt(document.getElementById('minAnswers').value);
+  MAX_ANSWERS = parseInt(document.getElementById('maxAnswers').value);
+  
+  // Validate answer range
+  if (MIN_ANSWERS > MAX_ANSWERS) {
+    alert('⚠️ Minimum answers cannot be greater than maximum answers!');
+    return;
+  }
 
   // Load questions
   await loadQuestions();
@@ -1857,16 +1875,38 @@ function revealStep(idx, runningTotal) {
   }
   
   const q = finalQuestions[idx];
-  const target = q.answers[0];
   const guess = finalGuesses[idx] || '';
   const row = document.getElementById('rrow' + idx);
-  const isHit = guess && fuzzyMatch(guess, target);
+  
+  // Check if guess matches ANY answer (not just #1)
+  let matchedAnswer = null;
+  if (guess) {
+    for (const answer of q.answers) {
+      if (fuzzyMatch(guess, answer)) {
+        matchedAnswer = answer;
+        break;
+      }
+    }
+  }
+  
+  const isHit = matchedAnswer !== null;
+  const displayAnswer = matchedAnswer || q.answers[0]; // Show what they got, or show #1 if wrong
   
   row.classList.add('active');
   
   setTimeout(() => {
-    document.getElementById('rr-correct' + idx).textContent = target.text;
-    const points = Math.round(target.points * FINAL_MULTIPLIER);
+    // Show the answer they matched (or #1 if they missed)
+    const correctAnswerElem = document.getElementById('rr-correct' + idx);
+    
+    if (isHit && matchedAnswer !== q.answers[0]) {
+      // They got a correct answer, but not #1 - show which one
+      const answerRank = q.answers.indexOf(matchedAnswer) + 1;
+      correctAnswerElem.textContent = `✓ ${displayAnswer.text} (#${answerRank})`;
+    } else {
+      correctAnswerElem.textContent = displayAnswer.text;
+    }
+    
+    const points = Math.round(displayAnswer.points * FINAL_MULTIPLIER);
     document.getElementById('rr-pts' + idx).textContent = points;
     
     if (isHit) {
@@ -1876,8 +1916,13 @@ function revealStep(idx, runningTotal) {
       document.getElementById('revealTotal').textContent = runningTotal;
       document.getElementById('revealTotal').classList.add('positive');
       
-      playNumberOne();
-      showNumberOneFlash();
+      // Only play #1 celebration if they got the #1 answer
+      if (matchedAnswer === q.answers[0]) {
+        playNumberOne();
+        showNumberOneFlash();
+      } else {
+        playCorrect();
+      }
     } else {
       row.classList.remove('active');
       row.classList.add('miss');
@@ -1891,10 +1936,17 @@ function revealStep(idx, runningTotal) {
 function revealDone() {
   let earned = 0;
   for (let i = 0; i < 5; i++) {
-    const target = finalQuestions[i].answers[0];
+    const q = finalQuestions[i];
     const guess = finalGuesses[i] || '';
-    if (guess && fuzzyMatch(guess, target)) {
-      earned += Math.round(target.points * FINAL_MULTIPLIER);
+    
+    // Check if guess matches ANY answer (not just #1)
+    if (guess) {
+      for (const answer of q.answers) {
+        if (fuzzyMatch(guess, answer)) {
+          earned += Math.round(answer.points * FINAL_MULTIPLIER);
+          break; // Only count once per question
+        }
+      }
     }
   }
   scores[activeTeam] += earned;
@@ -2085,17 +2137,21 @@ if (savedSettings) {
   document.getElementById('timerDuration').value = settings.timerDuration || 45;
   document.getElementById('maxStrikes').value = settings.maxStrikes || 3;
   document.getElementById('finalMultiplier').value = settings.finalMultiplier || 2;
+  document.getElementById('minAnswers').value = settings.minAnswers || 2;
+  document.getElementById('maxAnswers').value = settings.maxAnswers || 8;
 }
 
 // Save settings to localStorage when changed
-['numRounds', 'questionsPerRound', 'timerDuration', 'maxStrikes', 'finalMultiplier'].forEach(id => {
+['numRounds', 'questionsPerRound', 'timerDuration', 'maxStrikes', 'finalMultiplier', 'minAnswers', 'maxAnswers'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
     const settings = {
       numRounds: document.getElementById('numRounds').value,
       questionsPerRound: document.getElementById('questionsPerRound').value,
       timerDuration: document.getElementById('timerDuration').value,
       maxStrikes: document.getElementById('maxStrikes').value,
-      finalMultiplier: document.getElementById('finalMultiplier').value
+      finalMultiplier: document.getElementById('finalMultiplier').value,
+      minAnswers: document.getElementById('minAnswers').value,
+      maxAnswers: document.getElementById('maxAnswers').value
     };
     localStorage.setItem('familyFeudSettings', JSON.stringify(settings));
   });
