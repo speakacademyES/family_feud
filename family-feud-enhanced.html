@@ -1256,6 +1256,12 @@ function shuffle(arr) {
   return a;
 }
 
+function decodeHTMLEntities(text) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
 function normalize(str) {
   return str.toLowerCase()
     .replace(/[áàâä]/g, 'a').replace(/[éèêë]/g, 'e')
@@ -1550,7 +1556,7 @@ function loadQuestion() {
   strikes = 0;
   gamePhase = 'playing';
 
-  document.getElementById('questionText').textContent = currentQ.question;
+  document.getElementById('questionText').textContent = decodeHTMLEntities(currentQ.question);
   document.getElementById('roundIndicator').textContent =
     'Round ' + currentRound + ' — Question ' + (currentQIndex + 1);
 
@@ -1804,7 +1810,7 @@ function loadFinalQuestion() {
   }
   
   const q = finalQuestions[finalQIdx];
-  document.getElementById('finalQuestionText').textContent = q.question;
+  document.getElementById('finalQuestionText').textContent = decodeHTMLEntities(q.question);
   document.getElementById('finalAnswerInput').value = '';
   document.getElementById('finalAnswerInput').focus();
   
@@ -1882,11 +1888,12 @@ function startReveal() {
   for (let i = 0; i < 5; i++) {
     const q = finalQuestions[i];
     const guess = finalGuesses[i] || '(passed)';
+    const decodedQuestion = decodeHTMLEntities(q.question);
     container.innerHTML += `
       <div class="reveal-row" id="rrow${i}">
         <div class="rr-num">${i + 1}</div>
         <div class="rr-body">
-          <div class="rr-question">${q.question}</div>
+          <div class="rr-question">${decodedQuestion}</div>
           <div class="rr-answers">
             <span class="rr-guess">You: "${guess}"</span>
             <span class="rr-correct" id="rr-correct${i}"></span>
