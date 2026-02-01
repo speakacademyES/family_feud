@@ -13,8 +13,8 @@ A fully-featured Family Feud game for ESL classroom use with customizable questi
 
 ## 📁 Files
 
-- `family-feud-enhanced.html` - Main game file
-- `allQuestions.json` - Default question set (General Knowledge)
+- **family-feud-enhanced.html** - Main game file
+- **allQuestions.json** - Default question set (General Knowledge)
 
 ## 🚀 How to Use
 
@@ -25,13 +25,17 @@ A fully-featured Family Feud game for ESL classroom use with customizable questi
 4. Access your game at: `https://your-username.github.io/repository-name/family-feud-enhanced.html`
 
 ### Option 2: Local Use with Web Server
-```bash
-# Python
-python3 -m http.server 8000
 
-# Node.js
+**Using Python:**
+```bash
+python3 -m http.server 8000
+```
+
+**Using Node.js:**
+```bash
 npx http-server
 ```
+
 Then open: `http://localhost:8000/family-feud-enhanced.html`
 
 ### Option 3: Download and Open
@@ -58,24 +62,39 @@ Create a JSON file with this format:
 }
 ```
 
-Each question has an array of answers with `[text, points]` format.
+- Each question is a key
+- Each answer is an array: `["answer text", points]`
+- Questions should have 2-8 answers
+- Top answers should have higher points
 
 ## ⚙️ Game Settings
 
-- **Number of Rounds**: 1-5 (default: 3)
-- **Questions per Round**: 1-6 (default: 2)
-- **Time per Question**: 15-120 seconds (default: 45)
-- **Strikes Allowed**: 1-5 (default: 3)
-- **Final Round Multiplier**: 1-5x (default: 2x)
+Customize these before starting:
+
+| Setting | Range | Default |
+|---------|-------|---------|
+| Number of Rounds | 1-5 | 3 |
+| Questions per Round | 1-6 | 2 |
+| Time per Question | 15-120 sec | 45 |
+| Strikes Allowed | 1-5 | 3 |
+| Final Round Multiplier | 1-5x | 2x |
 
 Settings are saved automatically to localStorage.
 
-## 🎯 Gameplay
+## 🎯 How to Play
 
-1. **Regular Rounds**: Teams alternate answering questions to reveal all answers
-2. **Strikes**: Get 3 wrong answers and the question ends
-3. **Final Round**: 5 rapid questions - only #1 answers count, points are multiplied
-4. **Stats**: View live statistics during gameplay
+### Regular Rounds
+1. Teams alternate answering questions
+2. Try to reveal all answers on the board
+3. Wrong answers give you strikes (⚠️)
+4. Get 3 strikes and the question ends
+5. Points are awarded for each correct answer
+
+### Final Round
+1. 5 rapid-fire questions
+2. Only #1 answers count
+3. Points are multiplied (default: 2x)
+4. Fast-paced bonus round determines the winner!
 
 ## 🔧 Controls
 
