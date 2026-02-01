@@ -1266,16 +1266,31 @@ function normalize(str) {
 
 function fuzzyMatch(guess, target) {
   const g = normalize(guess);
-  const t = normalize(target.text);
-  if (g === t) return true;
-  const gWords = g.split(/\s+/);
-  const tWords = t.split(/\s+/);
-  if (gWords.length === 1 && tWords.length === 1) {
-    if (g.length >= 4 && t.startsWith(g)) return true;
-    if (t.length >= 4 && g.startsWith(t)) return true;
+  
+  // Check against all variations (supports both old and new format)
+  const variations = target.variations || [target.text];
+  
+  for (const variation of variations) {
+    const t = normalize(variation);
+    
+    // Exact match
+    if (g === t) return true;
+    
+    // Partial matching logic
+    const gWords = g.split(/\s+/);
+    const tWords = t.split(/\s+/);
+    
+    // Single word partial match (e.g., "pyram" matches "pyramids")
+    if (gWords.length === 1 && tWords.length === 1) {
+      if (g.length >= 4 && t.startsWith(g)) return true;
+      if (t.length >= 4 && g.startsWith(t)) return true;
+    }
+    
+    // Multi-word overlap match (e.g., "nile river" matches "the nile river")
+    const overlap = gWords.filter(w => tWords.includes(w)).length;
+    if (overlap > 0 && overlap >= Math.min(gWords.length, tWords.length) * 0.7) return true;
   }
-  const overlap = gWords.filter(w => tWords.includes(w)).length;
-  if (overlap > 0 && overlap >= Math.min(gWords.length, tWords.length) * 0.7) return true;
+  
   return false;
 }
 
@@ -1323,21 +1338,43 @@ function parseQuestionsJSON(raw) {
     for (let i = 0; i < answersArray.length; i++) {
       const answerItem = answersArray[i];
       
-      // Validate each answer is an array with [text, points]
+      // Validate each answer is an array with [text, points] or [[variations], points]
       if (!Array.isArray(answerItem) || answerItem.length < 2) {
         console.warn(`Skipping invalid answer in "${question}":`, answerItem);
         continue;
       }
       
-      const [text, points] = answerItem;
+      const [textOrVariations, points] = answerItem;
       
-      // Validate text is string and points is number
-      if (typeof text !== 'string' || typeof points !== 'number') {
+      // Handle both formats:
+      // Old format: ["Text", 50]
+      // New format: [["Text", "text variation", "another way"], 50]
+      let text, variations;
+      
+      if (Array.isArray(textOrVariations)) {
+        // New format with variations
+        if (textOrVariations.length === 0) {
+          console.warn(`Skipping empty variations in "${question}":`, answerItem);
+          continue;
+        }
+        text = textOrVariations[0]; // Display text is first variation
+        variations = textOrVariations; // All variations for matching
+      } else if (typeof textOrVariations === 'string') {
+        // Old format with single text
+        text = textOrVariations;
+        variations = [textOrVariations];
+      } else {
         console.warn(`Skipping malformed answer in "${question}":`, answerItem);
         continue;
       }
       
-      answers.push({ text, points });
+      // Validate points is number
+      if (typeof points !== 'number') {
+        console.warn(`Skipping answer with non-numeric points in "${question}":`, answerItem);
+        continue;
+      }
+      
+      answers.push({ text, variations, points });
     }
     
     // Only add question if answers are within the specified range
